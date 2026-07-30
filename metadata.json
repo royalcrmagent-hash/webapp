@@ -1,0 +1,6 @@
+{
+  "name": "Mobile Wallet",
+  "description": "A mobile-view digital wallet application with Send Money, Add Money, PIN authentication, and transaction tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

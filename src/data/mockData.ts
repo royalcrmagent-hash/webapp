@@ -1,0 +1,58 @@
+import { WalletState, UserAccount } from '../types';
+
+export const INITIAL_SYSTEM_USERS: UserAccount[] = [
+  {
+    id: 'usr_admin',
+    name: 'System Admin',
+    email: 'admin@gmail.com',
+    phone: '01700000000',
+    accountNo: 'ADM-0000-999',
+    pin: '1234',
+    password: '123456',
+    role: 'admin',
+    balance: 0,
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=250',
+    biometricEnabled: true,
+  },
+];
+
+export const INITIAL_WALLET_STATE: WalletState = {
+  balance: 0.0,
+  currency: '৳',
+  hideBalance: false,
+  user: {
+    name: 'Account Holder',
+    phone: '01700000000',
+    accountNo: 'WAL-1000-001',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=250',
+    pin: '1234',
+  },
+  contacts: [
+    {
+      id: 'c1',
+      name: 'Rahim Ahmed',
+      phone: '01712345678',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150',
+      favorite: true,
+    },
+    {
+      id: 'c2',
+      name: 'Nusrat Jahan',
+      phone: '01898765432',
+      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150',
+      favorite: true,
+    },
+  ],
+  transactions: [],
+  notifications: [
+    {
+      id: 'n1',
+      title: 'Welcome to Wallet',
+      message: 'Your real account is now active. You can Add Money or receive funds to begin.',
+      time: 'Just now',
+      read: false,
+      type: 'system',
+    },
+  ],
+};
+

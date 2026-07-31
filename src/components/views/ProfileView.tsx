@@ -278,7 +278,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <div>
               <h4 className="text-xs font-bold text-white">Wallet Security PIN</h4>
               <p className="text-[11px] text-slate-400">
-                Current PIN: <span className="font-mono text-emerald-400">{wallet.user.pin}</span>
+                Change or update your 4-digit security PIN
               </p>
             </div>
           </div>

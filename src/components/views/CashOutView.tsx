@@ -15,7 +15,7 @@ export const CashOutView: React.FC<CashOutViewProps> = ({
 }) => {
   const [agentNumber, setAgentNumber] = useState('01712009988');
   const [amount, setAmount] = useState('1000');
-  const [pin, setPin] = useState('1234');
+  const [pin, setPin] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
 
   const [category, setCategory] = useState<string>('Withdrawal');

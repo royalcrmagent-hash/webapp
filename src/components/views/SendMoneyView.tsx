@@ -326,16 +326,23 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
       </div>
 
       {/* Available Balance Pill */}
-      <div className="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-3 mb-4 flex items-center justify-between shadow-inner">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></div>
-          <span className="text-xs text-slate-400">Available Balance:</span>
-        </div>
-        <span className="text-sm font-bold text-emerald-400">
-          {wallet.currency}
-          {wallet.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-        </span>
-      </div>
+      {(() => {
+        const currentCountry = getCountryBySymbolOrCode(wallet.currency);
+        const rate = currentCountry.rateToBDT || 1;
+        const displayBalance = rate > 0 ? wallet.balance / rate : wallet.balance;
+        return (
+          <div className="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-3 mb-4 flex items-center justify-between shadow-inner">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></div>
+              <span className="text-xs text-slate-400">Available Balance ({currentCountry.code}):</span>
+            </div>
+            <span className="text-sm font-bold text-emerald-400">
+              {wallet.currency}
+              {displayBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+          </div>
+        );
+      })()}
 
       {/* STEP 1: SELECT RECIPIENT */}
       {step === 'select_recipient' && (
@@ -826,7 +833,10 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
                 <span className="text-slate-400">New Available Balance:</span>
                 <span className="text-emerald-400 font-bold">
                   {wallet.currency}
-                  {(wallet.balance).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  {((getCountryBySymbolOrCode(wallet.currency).rateToBDT || 1) > 0
+                    ? wallet.balance / (getCountryBySymbolOrCode(wallet.currency).rateToBDT || 1)
+                    : wallet.balance
+                  ).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
             </div>

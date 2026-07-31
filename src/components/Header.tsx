@@ -1,7 +1,7 @@
 import React from 'react';
-import { Bell, Eye, EyeOff, ShieldCheck, Award, Globe } from 'lucide-react';
+import { Bell, Eye, EyeOff, ShieldCheck, Award } from 'lucide-react';
 import { WalletState } from '../types';
-import { getCountryBySymbol, ALL_COUNTRIES } from '../data/countries';
+import { getCountryBySymbolOrCode, ALL_COUNTRIES } from '../data/countries';
 
 interface HeaderProps {
   wallet: WalletState;
@@ -17,7 +17,9 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenProfile,
 }) => {
   const unreadCount = wallet.notifications.filter((n) => !n.read).length;
-  const currentCountry = getCountryBySymbol(wallet.currency) || ALL_COUNTRIES[0];
+  const currentCountry = getCountryBySymbolOrCode(wallet.currency) || ALL_COUNTRIES[0];
+  const rate = currentCountry.rateToBDT || 1;
+  const displayBalance = rate > 0 ? wallet.balance / rate : wallet.balance;
 
   return (
     <div className="space-y-3.5 px-4 pt-3 pb-1">
@@ -97,13 +99,15 @@ export const Header: React.FC<HeaderProps> = ({
 
           <div className="flex items-end justify-between">
             <div>
-              <p className="text-[11px] text-emerald-200/70 uppercase tracking-wider font-semibold mb-0.5">Available Balance</p>
+              <p className="text-[11px] text-emerald-200/70 uppercase tracking-wider font-semibold mb-0.5">
+                Available Balance ({currentCountry.code})
+              </p>
               <div className="flex items-center gap-2.5">
                 <span className="text-3xl sm:text-4xl font-extrabold tracking-tight drop-shadow-sm">
                   {wallet.hideBalance ? (
                     <span className="tracking-widest text-slate-300">••••••••</span>
                   ) : (
-                    `${wallet.currency}${wallet.balance.toLocaleString('en-US', {
+                    `${wallet.currency}${displayBalance.toLocaleString('en-US', {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}`
@@ -129,7 +133,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <span>1 {currentCountry.code} = ৳{currentCountry.rateToBDT} BDT</span>
                 {currentCountry.code !== 'BDT' && !wallet.hideBalance && (
                   <span className="text-emerald-300 border-l border-white/20 pl-1.5 font-sans font-semibold">
-                    (≈ ৳{(wallet.balance * currentCountry.rateToBDT).toLocaleString('en-US', { maximumFractionDigits: 0 })} BDT)
+                    (Base: ৳{wallet.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} BDT)
                   </span>
                 )}
               </div>

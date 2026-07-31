@@ -18,6 +18,7 @@ import {
   Wifi,
 } from 'lucide-react';
 import { WalletState, VirtualCard, VirtualCardType } from '../../types';
+import { PopupDialog, DialogType } from '../ui/PopupDialog';
 
 interface VirtualCardsViewProps {
   wallet: WalletState;
@@ -62,6 +63,44 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
 
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
+  // Custom Popup Dialog State
+  const [dialogState, setDialogState] = useState<{
+    isOpen: boolean;
+    type?: DialogType;
+    title: string;
+    message: React.ReactNode;
+    confirmText?: string;
+    cancelText?: string;
+    onConfirm?: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+  });
+
+  const openPopup = (
+    title: string,
+    message: React.ReactNode,
+    type: DialogType = 'info',
+    onConfirm?: () => void,
+    confirmText?: string,
+    cancelText?: string
+  ) => {
+    setDialogState({
+      isOpen: true,
+      title,
+      message,
+      type,
+      onConfirm,
+      confirmText,
+      cancelText,
+    });
+  };
+
+  const closePopup = () => {
+    setDialogState((prev) => ({ ...prev, isOpen: false }));
+  };
+
   const showToast = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 3000);
@@ -88,11 +127,15 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
     e.preventDefault();
     const deposit = parseFloat(issueAmount || '0');
     if (deposit < 0) {
-      alert('Amount cannot be negative');
+      openPopup('Invalid Amount', 'Deposit amount cannot be negative.', 'warning');
       return;
     }
     if (deposit > wallet.balance) {
-      alert(`Insufficient balance in wallet. Available: ${wallet.currency}${wallet.balance}`);
+      openPopup(
+        'Insufficient Balance',
+        `You do not have enough wallet balance. Available balance: ${wallet.currency}${wallet.balance.toFixed(2)}`,
+        'error'
+      );
       return;
     }
 
@@ -152,11 +195,15 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
     if (!topUpCardTarget) return;
     const amt = parseFloat(topUpAmount || '0');
     if (amt <= 0) {
-      alert('Please enter a valid amount.');
+      openPopup('Invalid Amount', 'Please enter a valid top up amount.', 'warning');
       return;
     }
     if (amt > wallet.balance) {
-      alert(`Insufficient wallet balance. Available: ${wallet.currency}${wallet.balance}`);
+      openPopup(
+        'Insufficient Balance',
+        `Insufficient wallet balance. Available: ${wallet.currency}${wallet.balance.toFixed(2)}`,
+        'error'
+      );
       return;
     }
 
@@ -172,11 +219,15 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
     if (!withdrawCardTarget) return;
     const amt = parseFloat(withdrawAmount || '0');
     if (amt <= 0) {
-      alert('Please enter a valid amount.');
+      openPopup('Invalid Amount', 'Please enter a valid withdrawal amount.', 'warning');
       return;
     }
     if (amt > withdrawCardTarget.balance) {
-      alert(`Cannot withdraw more than card balance (${wallet.currency}${withdrawCardTarget.balance}).`);
+      openPopup(
+        'Card Balance Exceeded',
+        `Cannot withdraw more than card balance (${wallet.currency}${withdrawCardTarget.balance.toFixed(2)}).`,
+        'warning'
+      );
       return;
     }
 
@@ -502,13 +553,19 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
                   {/* Close Card */}
                   <button
                     onClick={() => {
-                      if (confirm(`Are you sure you want to close/delete ${card.cardName}? Remaining balance will be refunded to your wallet.`)) {
-                        if (card.balance > 0) {
-                          onWithdrawCard(card.id, card.balance);
-                        }
-                        onDeleteCard(card.id);
-                        showToast(`${card.cardName} closed.`);
-                      }
+                      openPopup(
+                        'Close Virtual Card',
+                        `Are you sure you want to close/delete ${card.cardName}? Remaining balance will be refunded to your wallet.`,
+                        'confirm',
+                        () => {
+                          if (card.balance > 0) {
+                            onWithdrawCard(card.id, card.balance);
+                          }
+                          onDeleteCard(card.id);
+                          showToast(`${card.cardName} closed.`);
+                        },
+                        'Close Card'
+                      );
                     }}
                     className="p-2 text-rose-400 hover:text-rose-200 hover:bg-rose-500/10 rounded-xl transition"
                     title="Close Virtual Card"
@@ -754,6 +811,16 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
           </div>
         </div>
       )}
+      <PopupDialog
+        isOpen={dialogState.isOpen}
+        type={dialogState.type}
+        title={dialogState.title}
+        message={dialogState.message}
+        onConfirm={dialogState.onConfirm}
+        onClose={closePopup}
+        confirmText={dialogState.confirmText}
+        cancelText={dialogState.cancelText}
+      />
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { UserAccount } from '../../types';
+import { PopupDialog, DialogType } from '../ui/PopupDialog';
 import {
   Lock,
   Mail,
@@ -30,12 +31,30 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Custom Popup Dialog State
+  const [dialogState, setDialogState] = useState<{
+    isOpen: boolean;
+    type?: DialogType;
+    title: string;
+    message: React.ReactNode;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+  });
+
+  const openPopup = (title: string, message: React.ReactNode, type: DialogType = 'error') => {
+    setDialogState({ isOpen: true, title, message, type });
+  };
+
+  const closePopup = () => {
+    setDialogState((prev) => ({ ...prev, isOpen: false }));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setIsLoading(true);
 
     setTimeout(() => {
@@ -67,46 +86,48 @@ export const LoginView: React.FC<LoginViewProps> = ({
         });
 
         if (!user) {
-          setError('Account not found. Please check your Username, Email, Phone, or Account Number.');
+          openPopup('Login Failed', 'Account not found. Please check your Username, Email, Phone, or Account Number.');
           setIsLoading(false);
           return;
         }
 
         if (user.isFrozen) {
-          setError('This account has been frozen by the System Admin. Please contact support.');
+          openPopup('Account Frozen', 'This account has been frozen by the System Admin. Please contact support.', 'warning');
           setIsLoading(false);
           return;
         }
 
-        // If password is also provided, verify match
-        if (password.trim()) {
-          const matchPassword = user.password && user.password === password.trim();
-          const matchPin = user.pin === password.trim();
+        // Require password
+        if (!password.trim()) {
+          openPopup('Password Required', 'Please enter your account password.', 'warning');
+          setIsLoading(false);
+          return;
+        }
 
-          if (!matchPassword && !matchPin) {
-            setError('Invalid password or security PIN.');
-            setIsLoading(false);
-            return;
-          }
+        const matchPassword = user.password && user.password === password.trim();
+        if (!matchPassword) {
+          openPopup('Login Failed', 'Invalid account password.');
+          setIsLoading(false);
+          return;
         }
       } else if (password.trim()) {
         // CASE B: ONLY Password provided (Identifier is empty)
         const inputPass = password.trim();
-        user = systemUsers.find((u) => (u.password && u.password === inputPass) || u.pin === inputPass);
+        user = systemUsers.find((u) => u.password && u.password === inputPass);
 
         if (!user) {
-          setError('No account found matching this password or PIN.');
+          openPopup('Login Failed', 'No account found matching this password.');
           setIsLoading(false);
           return;
         }
 
         if (user.isFrozen) {
-          setError('This account has been frozen by the System Admin. Please contact support.');
+          openPopup('Account Frozen', 'This account has been frozen by the System Admin. Please contact support.', 'warning');
           setIsLoading(false);
           return;
         }
       } else {
-        setError('Please enter your Username, Email, Phone, Account Number, or Password.');
+        openPopup('Input Required', 'Please enter your Username, Email, Phone, Account Number, or Password.', 'warning');
         setIsLoading(false);
         return;
       }
@@ -154,13 +175,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
-          {error && (
-            <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 flex items-center gap-3 text-rose-700 text-sm font-medium">
-              <AlertCircle className="w-5 h-5 shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
-
           {/* Identifier Input */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -184,7 +198,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                Password / PIN
+                Password
               </label>
               <button
                 type="button"
@@ -199,7 +213,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password or 4-digit PIN"
+                placeholder="Enter account password"
                 className="w-full bg-slate-50 border border-slate-200 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 text-slate-950 rounded-2xl px-5 py-4 text-sm placeholder-slate-400 transition outline-none font-mono"
               />
               <button
@@ -214,7 +228,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
           <div className="bg-slate-100 p-3 rounded-2xl border border-slate-200/80 text-[11px] text-slate-600 flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>Login with <strong>Password only</strong>, or <strong>Username / Email / Mobile / Account Number</strong>.</span>
+            <span>Login using your registered account <strong>Password</strong>.</span>
           </div>
 
           {/* Submit Button */}
@@ -250,6 +264,14 @@ export const LoginView: React.FC<LoginViewProps> = ({
           </p>
         </div>
       </div>
+
+      <PopupDialog
+        isOpen={dialogState.isOpen}
+        type={dialogState.type}
+        title={dialogState.title}
+        message={dialogState.message}
+        onClose={closePopup}
+      />
     </div>
   );
 };

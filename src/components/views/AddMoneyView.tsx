@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, Building2, CreditCard, CheckCircle2, ChevronRight, ShieldCheck } from 'lucide-react';
 import { WalletState, Transaction } from '../../types';
 import { getCountryBySymbolOrCode } from '../../data/countries';
+import { PopupDialog, DialogType } from '../ui/PopupDialog';
 
 interface AddMoneyViewProps {
   wallet: WalletState;
@@ -20,6 +21,26 @@ export const AddMoneyView: React.FC<AddMoneyViewProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
+  // Custom Popup Dialog State
+  const [dialogState, setDialogState] = useState<{
+    isOpen: boolean;
+    type?: DialogType;
+    title: string;
+    message: React.ReactNode;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+  });
+
+  const openPopup = (title: string, message: React.ReactNode, type: DialogType = 'info') => {
+    setDialogState({ isOpen: true, title, message, type });
+  };
+
+  const closePopup = () => {
+    setDialogState((prev) => ({ ...prev, isOpen: false }));
+  };
+
   const bankOptions = [
     'BRAC Bank Visa (*4092)',
     'City Bank Mastercard (*8812)',
@@ -33,7 +54,7 @@ export const AddMoneyView: React.FC<AddMoneyViewProps> = ({
   const handleAddMoney = () => {
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) {
-      alert('Please enter a valid amount');
+      openPopup('Invalid Amount', 'Please enter a valid amount', 'warning');
       return;
     }
 
@@ -231,6 +252,14 @@ export const AddMoneyView: React.FC<AddMoneyViewProps> = ({
           </button>
         </div>
       )}
+
+      <PopupDialog
+        isOpen={dialogState.isOpen}
+        type={dialogState.type}
+        title={dialogState.title}
+        message={dialogState.message}
+        onClose={closePopup}
+      />
     </div>
   );
 };

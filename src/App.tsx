@@ -19,6 +19,7 @@ import { SignupView } from './components/views/SignupView';
 import { ForgotPasswordView } from './components/views/ForgotPasswordView';
 import { AdminPanel } from './components/views/AdminPanel';
 import { VirtualCardsView } from './components/views/VirtualCardsView';
+import { PopupDialog, DialogType } from './components/ui/PopupDialog';
 import { INITIAL_WALLET_STATE, INITIAL_SYSTEM_USERS, INITIAL_VIRTUAL_CARDS } from './data/initialData';
 import { WalletState, Transaction, Contact, Currency, UserAccount, VirtualCard, VirtualCardType } from './types';
 import {
@@ -182,6 +183,26 @@ export default function App() {
   });
 
   const [selectedCardTypeFilter, setSelectedCardTypeFilter] = useState<VirtualCardType | 'all'>('all');
+
+  // Custom Popup Dialog State
+  const [dialogState, setDialogState] = useState<{
+    isOpen: boolean;
+    type?: DialogType;
+    title: string;
+    message: React.ReactNode;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+  });
+
+  const openPopup = (title: string, message: React.ReactNode, type: DialogType = 'info') => {
+    setDialogState({ isOpen: true, title, message, type });
+  };
+
+  const closePopup = () => {
+    setDialogState((prev) => ({ ...prev, isOpen: false }));
+  };
 
   useEffect(() => {
     try {
@@ -365,7 +386,7 @@ export default function App() {
   const handleBoostBalance = () => {
     if (wallet.balance <= 0) {
       setIsBoosting(false);
-      alert("You don't have sufficient balance");
+      openPopup('Insufficient Balance', "You don't have sufficient balance", 'warning');
       return;
     }
     setIsBoosting((prev) => !prev);
@@ -552,7 +573,7 @@ export default function App() {
     }
     else if (key === 'boost') {
       if (wallet.balance <= 0) {
-        alert("You don't have sufficient balance");
+        openPopup('Insufficient Balance', "You don't have sufficient balance", 'warning');
         return;
       }
       handleBoostBalance();
@@ -885,6 +906,14 @@ export default function App() {
           onRegisterUser={handleRegisterUser}
           onUpdateUserCredentials={handleUpdateUserCredentials}
           initialMode={authInitialMode}
+        />
+
+        <PopupDialog
+          isOpen={dialogState.isOpen}
+          type={dialogState.type}
+          title={dialogState.title}
+          message={dialogState.message}
+          onClose={closePopup}
         />
       </div>
     </div>

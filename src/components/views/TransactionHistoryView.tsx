@@ -16,6 +16,7 @@ import {
   Check,
 } from 'lucide-react';
 import { WalletState, Transaction, TransactionType } from '../../types';
+import { PopupDialog, DialogType } from '../ui/PopupDialog';
 
 interface TransactionHistoryViewProps {
   wallet: WalletState;
@@ -31,6 +32,26 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null);
+
+  // Custom Popup Dialog State
+  const [dialogState, setDialogState] = useState<{
+    isOpen: boolean;
+    type?: DialogType;
+    title: string;
+    message: React.ReactNode;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+  });
+
+  const openPopup = (title: string, message: React.ReactNode, type: DialogType = 'info') => {
+    setDialogState({ isOpen: true, title, message, type });
+  };
+
+  const closePopup = () => {
+    setDialogState((prev) => ({ ...prev, isOpen: false }));
+  };
 
   // Editing Category state inside Receipt Modal
   const [isEditingCategory, setIsEditingCategory] = useState(false);
@@ -328,14 +349,14 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
 
             <div className="flex gap-2">
               <button
-                onClick={() => alert(`Receipt downloaded for ${selectedTxn.id}`)}
+                onClick={() => openPopup('Receipt Downloaded', `Receipt downloaded for ${selectedTxn.id}`, 'success')}
                 className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Download</span>
               </button>
               <button
-                onClick={() => alert(`Sharing receipt ${selectedTxn.id}`)}
+                onClick={() => openPopup('Sharing Receipt', `Sharing receipt ${selectedTxn.id}`, 'info')}
                 className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1"
               >
                 <Share2 className="w-3.5 h-3.5" />
@@ -345,6 +366,14 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
           </div>
         </div>
       )}
+
+      <PopupDialog
+        isOpen={dialogState.isOpen}
+        type={dialogState.type}
+        title={dialogState.title}
+        message={dialogState.message}
+        onClose={closePopup}
+      />
     </div>
   );
 };

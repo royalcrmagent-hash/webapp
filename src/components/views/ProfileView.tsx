@@ -3,6 +3,7 @@ import { ShieldCheck, Key, RefreshCw, Smartphone, DollarSign, ArrowLeft, Check, 
 import { WalletState, Currency, UserAccount } from '../../types';
 import { CountrySelectorModal } from './CountrySelectorModal';
 import { ALL_COUNTRIES, getCountryBySymbolOrCode, CountryCurrency } from '../../data/countries';
+import { PopupDialog, DialogType } from '../ui/PopupDialog';
 
 interface ProfileViewProps {
   wallet: WalletState;
@@ -33,6 +34,26 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [pinErrorMsg, setPinErrorMsg] = useState<string | null>(null);
   const [calcAmount, setCalcAmount] = useState<string>('100');
   const [rateChangedBanner, setRateChangedBanner] = useState<string | null>(null);
+
+  // Custom Popup Dialog State
+  const [dialogState, setDialogState] = useState<{
+    isOpen: boolean;
+    type?: DialogType;
+    title: string;
+    message: React.ReactNode;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+  });
+
+  const openPopup = (title: string, message: React.ReactNode, type: DialogType = 'info') => {
+    setDialogState({ isOpen: true, title, message, type });
+  };
+
+  const closePopup = () => {
+    setDialogState((prev) => ({ ...prev, isOpen: false }));
+  };
 
   const currentCountry = getCountryBySymbolOrCode(wallet.currency);
 
@@ -72,7 +93,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     setOldPinInput('');
     setNewPinInput('');
     setPinErrorMsg(null);
-    alert('Security PIN updated successfully!');
+    openPopup('PIN Updated', 'Security PIN updated successfully!', 'success');
   };
 
   const convertedValue = (parseFloat(calcAmount || '0') * currentCountry.rateToUSD).toLocaleString('en-US', {
@@ -390,6 +411,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         onSelectCountry={(country) => {
           handleCurrencyChange(country);
         }}
+      />
+
+      <PopupDialog
+        isOpen={dialogState.isOpen}
+        type={dialogState.type}
+        title={dialogState.title}
+        message={dialogState.message}
+        onClose={closePopup}
       />
     </div>
   );

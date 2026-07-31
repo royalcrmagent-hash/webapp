@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, ArrowUpRight, CheckCircle2, ChevronRight, ShieldCheck, AlertCircle } from 'lucide-react';
 import { WalletState, Transaction } from '../../types';
+import { PopupDialog, DialogType } from '../ui/PopupDialog';
 
 interface CashOutViewProps {
   wallet: WalletState;
@@ -18,21 +19,41 @@ export const CashOutView: React.FC<CashOutViewProps> = ({
   const [pin, setPin] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
 
+  // Custom Popup Dialog State
+  const [dialogState, setDialogState] = useState<{
+    isOpen: boolean;
+    type?: DialogType;
+    title: string;
+    message: React.ReactNode;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+  });
+
+  const openPopup = (title: string, message: React.ReactNode, type: DialogType = 'info') => {
+    setDialogState({ isOpen: true, title, message, type });
+  };
+
+  const closePopup = () => {
+    setDialogState((prev) => ({ ...prev, isOpen: false }));
+  };
+
   const [category, setCategory] = useState<string>('Withdrawal');
   const [customCategory, setCustomCategory] = useState<string>('');
 
   const handleCashOut = () => {
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) {
-      alert('Enter valid amount');
+      openPopup('Invalid Amount', 'Enter valid amount', 'warning');
       return;
     }
     if (numAmount > wallet.balance) {
-      alert('Insufficient balance');
+      openPopup('Insufficient Balance', 'Insufficient balance', 'error');
       return;
     }
     if (pin !== wallet.user.pin) {
-      alert('Incorrect PIN.');
+      openPopup('Incorrect PIN', 'Incorrect PIN.', 'error');
       return;
     }
 
@@ -167,6 +188,14 @@ export const CashOutView: React.FC<CashOutViewProps> = ({
           </button>
         </div>
       )}
+
+      <PopupDialog
+        isOpen={dialogState.isOpen}
+        type={dialogState.type}
+        title={dialogState.title}
+        message={dialogState.message}
+        onClose={closePopup}
+      />
     </div>
   );
 };

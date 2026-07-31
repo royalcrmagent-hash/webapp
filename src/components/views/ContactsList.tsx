@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Search, UserPlus, Send, Sparkles, Phone, Trash2 } from 'lucide-react';
 import { Contact, WalletState } from '../../types';
+import { PopupDialog, DialogType } from '../ui/PopupDialog';
 
 interface ContactsListProps {
   wallet: WalletState;
@@ -20,6 +21,44 @@ export const ContactsList: React.FC<ContactsListProps> = ({
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
 
+  // Custom Popup Dialog State
+  const [dialogState, setDialogState] = useState<{
+    isOpen: boolean;
+    type?: DialogType;
+    title: string;
+    message: React.ReactNode;
+    onConfirm?: () => void;
+    confirmText?: string;
+    cancelText?: string;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+  });
+
+  const openPopup = (
+    title: string,
+    message: React.ReactNode,
+    type: DialogType = 'info',
+    onConfirm?: () => void,
+    confirmText?: string,
+    cancelText?: string
+  ) => {
+    setDialogState({
+      isOpen: true,
+      title,
+      message,
+      type,
+      onConfirm,
+      confirmText,
+      cancelText,
+    });
+  };
+
+  const closePopup = () => {
+    setDialogState((prev) => ({ ...prev, isOpen: false }));
+  };
+
   const filtered = wallet.contacts.filter(
     (c) =>
       c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -28,7 +67,7 @@ export const ContactsList: React.FC<ContactsListProps> = ({
 
   const handleSaveContact = () => {
     if (!newName.trim() || !newPhone.trim()) {
-      alert('Please enter both full name and phone number');
+      openPopup('Missing Information', 'Please enter both full name and phone number', 'warning');
       return;
     }
     const newC: Contact = {
@@ -104,9 +143,13 @@ export const ContactsList: React.FC<ContactsListProps> = ({
               {onDeleteContact && (
                 <button
                   onClick={() => {
-                    if (confirm(`Delete ${c.name} from contacts?`)) {
-                      onDeleteContact(c.id);
-                    }
+                    openPopup(
+                      'Delete Contact',
+                      `Are you sure you want to delete ${c.name} from your contacts?`,
+                      'confirm',
+                      () => onDeleteContact(c.id),
+                      'Delete'
+                    );
                   }}
                   className="p-1.5 text-slate-500 hover:text-rose-400 transition rounded-lg hover:bg-slate-800"
                   title="Delete Contact"
@@ -160,6 +203,18 @@ export const ContactsList: React.FC<ContactsListProps> = ({
           </div>
         </div>
       )}
+
+      <PopupDialog
+        isOpen={dialogState.isOpen}
+        type={dialogState.type}
+        title={dialogState.title}
+        message={dialogState.message}
+        onConfirm={dialogState.onConfirm}
+        onClose={closePopup}
+        confirmText={dialogState.confirmText}
+        cancelText={dialogState.cancelText}
+        showCancel={dialogState.type === 'confirm'}
+      />
     </div>
   );
 };

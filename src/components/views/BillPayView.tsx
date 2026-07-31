@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Receipt, CheckCircle2, Zap, Droplets, Wifi, Flame, ChevronRight } from 'lucide-react';
 import { WalletState, Transaction } from '../../types';
+import { PopupDialog, DialogType } from '../ui/PopupDialog';
 
 interface BillPayViewProps {
   wallet: WalletState;
@@ -18,6 +19,26 @@ export const BillPayView: React.FC<BillPayViewProps> = ({
   const [amount, setAmount] = useState('1850');
   const [isSuccess, setIsSuccess] = useState(false);
 
+  // Custom Popup Dialog State
+  const [dialogState, setDialogState] = useState<{
+    isOpen: boolean;
+    type?: DialogType;
+    title: string;
+    message: React.ReactNode;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+  });
+
+  const openPopup = (title: string, message: React.ReactNode, type: DialogType = 'info') => {
+    setDialogState({ isOpen: true, title, message, type });
+  };
+
+  const closePopup = () => {
+    setDialogState((prev) => ({ ...prev, isOpen: false }));
+  };
+
   const [customLabel, setCustomLabel] = useState<string>('Bills');
 
   const billers = [
@@ -30,11 +51,11 @@ export const BillPayView: React.FC<BillPayViewProps> = ({
   const handlePayBill = () => {
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) {
-      alert('Enter valid amount');
+      openPopup('Invalid Amount', 'Enter valid amount', 'warning');
       return;
     }
     if (numAmount > wallet.balance) {
-      alert('Insufficient wallet balance');
+      openPopup('Insufficient Balance', 'Insufficient wallet balance', 'error');
       return;
     }
 
@@ -182,6 +203,14 @@ export const BillPayView: React.FC<BillPayViewProps> = ({
           </button>
         </div>
       )}
+
+      <PopupDialog
+        isOpen={dialogState.isOpen}
+        type={dialogState.type}
+        title={dialogState.title}
+        message={dialogState.message}
+        onClose={closePopup}
+      />
     </div>
   );
 };

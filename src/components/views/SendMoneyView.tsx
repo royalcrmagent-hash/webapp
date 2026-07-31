@@ -19,6 +19,7 @@ import {
 import { Contact, Transaction, WalletState, UserAccount } from '../../types';
 import { BiometricModal } from '../BiometricModal';
 import { getCountryBySymbolOrCode } from '../../data/countries';
+import { PopupDialog, DialogType } from '../ui/PopupDialog';
 
 interface SendMoneyViewProps {
   wallet: WalletState;
@@ -59,6 +60,26 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
   const [completedTxn, setCompletedTxn] = useState<Transaction | null>(null);
   const [showBiometricModal, setShowBiometricModal] = useState<boolean>(false);
   const [biometricVerified, setBiometricVerified] = useState<boolean>(false);
+
+  // Custom Popup Dialog State
+  const [dialogState, setDialogState] = useState<{
+    isOpen: boolean;
+    type?: DialogType;
+    title: string;
+    message: React.ReactNode;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+  });
+
+  const openPopup = (title: string, message: React.ReactNode, type: DialogType = 'info') => {
+    setDialogState({ isOpen: true, title, message, type });
+  };
+
+  const closePopup = () => {
+    setDialogState((prev) => ({ ...prev, isOpen: false }));
+  };
 
   const [selectedCategory, setSelectedCategory] = useState<string>('Transfer');
   const [customCategory, setCustomCategory] = useState<string>('');
@@ -209,7 +230,7 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
 
   const handleCustomPhoneProceed = () => {
     if (!searchQuery || searchQuery.trim().length < 2) {
-      alert('Please enter a valid mobile number, username, or email.');
+      openPopup('Invalid Input', 'Please enter a valid mobile number, username, or email.', 'warning');
       return;
     }
     const resolved = matchedAccount || {
@@ -842,14 +863,14 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
           <div className="space-y-2 pt-2">
             <div className="flex gap-2">
               <button
-                onClick={() => alert(`Receipt ${completedTxn.id} downloaded!`)}
+                onClick={() => openPopup('Receipt Downloaded', `Receipt ${completedTxn.id} downloaded!`, 'success')}
                 className="flex-1 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Save Receipt</span>
               </button>
               <button
-                onClick={() => alert(`Sharing receipt ${completedTxn.id}`)}
+                onClick={() => openPopup('Sharing Receipt', `Sharing receipt ${completedTxn.id}`, 'info')}
                 className="flex-1 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition"
               >
                 <Share2 className="w-3.5 h-3.5" />
@@ -888,6 +909,14 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
         onSuccess={handleBiometricSuccess}
         onCancel={() => setShowBiometricModal(false)}
         onFallbackToPin={() => setShowBiometricModal(false)}
+      />
+
+      <PopupDialog
+        isOpen={dialogState.isOpen}
+        type={dialogState.type}
+        title={dialogState.title}
+        message={dialogState.message}
+        onClose={closePopup}
       />
     </div>
   );

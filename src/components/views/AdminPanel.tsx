@@ -22,6 +22,7 @@ import {
   CreditCard,
   FileText,
 } from 'lucide-react';
+import { PopupDialog, DialogType } from '../ui/PopupDialog';
 
 interface AdminPanelProps {
   currentUser: UserAccount;
@@ -48,6 +49,44 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'users' | 'transactions' | 'settings'>('users');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Custom Popup Dialog State
+  const [dialogState, setDialogState] = useState<{
+    isOpen: boolean;
+    type?: DialogType;
+    title: string;
+    message: React.ReactNode;
+    onConfirm?: () => void;
+    confirmText?: string;
+    cancelText?: string;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+  });
+
+  const openPopup = (
+    title: string,
+    message: React.ReactNode,
+    type: DialogType = 'info',
+    onConfirm?: () => void,
+    confirmText?: string,
+    cancelText?: string
+  ) => {
+    setDialogState({
+      isOpen: true,
+      title,
+      message,
+      type,
+      onConfirm,
+      confirmText,
+      cancelText,
+    });
+  };
+
+  const closePopup = () => {
+    setDialogState((prev) => ({ ...prev, isOpen: false }));
+  };
 
   // Balance adjustment modal state
   const [adjustingUser, setAdjustingUser] = useState<UserAccount | null>(null);
@@ -93,7 +132,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     if (!adjustingUser) return;
     const val = parseFloat(adjustAmount);
     if (isNaN(val) || val <= 0) {
-      alert('Please enter a valid amount.');
+      openPopup('Invalid Amount', 'Please enter a valid amount.', 'warning');
       return;
     }
 
@@ -106,7 +145,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     });
 
     onUpdateUsers(updated);
-    alert(`Successfully ${adjustType === 'credit' ? 'credited' : 'debited'} ৳${val.toLocaleString()} for ${adjustingUser.name}`);
+    openPopup('Balance Adjusted', `Successfully ${adjustType === 'credit' ? 'credited' : 'debited'} ৳${val.toLocaleString()} for ${adjustingUser.name}`, 'success');
     setAdjustingUser(null);
     setAdjustAmount('');
     setAdjustNote('');
@@ -507,6 +546,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           </div>
         </div>
       )}
+
+      <PopupDialog
+        isOpen={dialogState.isOpen}
+        type={dialogState.type}
+        title={dialogState.title}
+        message={dialogState.message}
+        onConfirm={dialogState.onConfirm}
+        onClose={closePopup}
+        confirmText={dialogState.confirmText}
+        cancelText={dialogState.cancelText}
+        showCancel={dialogState.type === 'confirm'}
+      />
     </div>
   );
 };

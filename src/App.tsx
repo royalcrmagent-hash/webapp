@@ -36,6 +36,7 @@ import {
 
 const LOCAL_STORAGE_KEY = 'mobile_wallet_app_state_v1';
 const LOCAL_STORAGE_USERS_KEY = 'mobile_wallet_system_users_v1';
+const LOCAL_STORAGE_CURRENT_USER_KEY = 'mobile_wallet_current_user_v1';
 
 export default function App() {
   const [wallet, setWallet] = useState<WalletState>(() => {
@@ -63,8 +64,18 @@ export default function App() {
     return INITIAL_SYSTEM_USERS;
   });
 
-  // Active Current User State (Default: null)
-  const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
+  // Active Current User State
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_CURRENT_USER_KEY);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error('Failed to load current user:', e);
+    }
+    return null;
+  });
 
   // Biometric Security Policy Settings
   const [biometricThreshold, setBiometricThreshold] = useState<number>(1000);
@@ -82,7 +93,18 @@ export default function App() {
   useInactivityLogout(handleLogout, 5 * 60 * 1000);
 
   // Current View: 'home' | 'send' | 'add_money' | 'cash_out' | 'bill_pay' | 'transactions' | 'contacts' | 'profile' | 'notifications' | 'admin' | 'login' | 'signup' | 'forgot'
-  const [currentView, setCurrentView] = useState<string>('login');
+  const [currentView, setCurrentView] = useState<string>(() => {
+    try {
+      const savedUser = localStorage.getItem(LOCAL_STORAGE_CURRENT_USER_KEY);
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        return user.role === 'admin' ? 'admin' : 'home';
+      }
+    } catch (e) {
+      // ignore
+    }
+    return 'login';
+  });
   const [showQRScanner, setShowQRScanner] = useState<boolean>(false);
   const [selectedRecipientForSend, setSelectedRecipientForSend] = useState<{
     name: string;
@@ -107,6 +129,19 @@ export default function App() {
       console.error('Failed to save system users:', e);
     }
   }, [systemUsers]);
+
+  // Save current user on updates
+  useEffect(() => {
+    try {
+      if (currentUser) {
+        localStorage.setItem(LOCAL_STORAGE_CURRENT_USER_KEY, JSON.stringify(currentUser));
+      } else {
+        localStorage.removeItem(LOCAL_STORAGE_CURRENT_USER_KEY);
+      }
+    } catch (e) {
+      console.error('Failed to save current user:', e);
+    }
+  }, [currentUser]);
 
   const handleBoostBalance = () => {
     setWallet((prev) => ({

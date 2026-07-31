@@ -1,6 +1,7 @@
 import React from 'react';
-import { Bell, Eye, EyeOff, ShieldCheck, Award } from 'lucide-react';
+import { Bell, Eye, EyeOff, ShieldCheck, Award, Globe } from 'lucide-react';
 import { WalletState } from '../types';
+import { getCountryBySymbol, ALL_COUNTRIES } from '../data/countries';
 
 interface HeaderProps {
   wallet: WalletState;
@@ -16,6 +17,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenProfile,
 }) => {
   const unreadCount = wallet.notifications.filter((n) => !n.read).length;
+  const currentCountry = getCountryBySymbol(wallet.currency) || ALL_COUNTRIES[0];
 
   return (
     <div className="space-y-3.5 px-4 pt-3 pb-1">
@@ -47,8 +49,18 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Country & Currency Flag Badge */}
+          <button
+            onClick={onOpenProfile}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl bg-slate-900/90 border border-slate-800 text-slate-200 hover:border-emerald-500/50 hover:text-white transition active:scale-95 shadow-sm text-xs font-bold"
+            title={`Active Country: ${currentCountry.name} (${currentCountry.code})`}
+          >
+            <span className="text-sm leading-none">{currentCountry.flag}</span>
+            <span className="font-mono text-[11px] text-emerald-400">{currentCountry.code}</span>
+          </button>
+
           {/* VIP Tier Badge */}
-          <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold">
+          <div className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold">
             <Award className="w-3.5 h-3.5" />
             <span>VIP Gold</span>
           </div>

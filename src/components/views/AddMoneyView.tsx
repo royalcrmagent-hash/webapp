@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Building2, CreditCard, CheckCircle2, ChevronRight, ShieldCheck } from 'lucide-react';
 import { WalletState, Transaction } from '../../types';
+import { getCountryBySymbolOrCode } from '../../data/countries';
 
 interface AddMoneyViewProps {
   wallet: WalletState;
@@ -122,29 +123,46 @@ export const AddMoneyView: React.FC<AddMoneyViewProps> = ({
           </div>
 
           {/* Enter Amount */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center space-y-2">
-            <label className="text-xs text-slate-400 font-medium">Deposit Amount</label>
-            <div className="flex items-center justify-center gap-1">
-              <span className="text-2xl font-bold text-emerald-400">{wallet.currency}</span>
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="w-40 text-3xl font-extrabold text-white text-center bg-transparent focus:outline-none"
-              />
-            </div>
-            <div className="flex justify-center gap-2 pt-2">
-              {[1000, 2000, 5000, 10000].map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setAmount(v.toString())}
-                  className="px-2.5 py-1 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-300 font-medium"
-                >
-                  +{v}
-                </button>
-              ))}
-            </div>
-          </div>
+          {(() => {
+            const currentCountry = getCountryBySymbolOrCode(wallet.currency);
+            const numAmount = parseFloat(amount || '0');
+            return (
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center space-y-2">
+                <label className="text-xs text-slate-400 font-medium">Deposit Amount</label>
+                <div className="flex items-center justify-center gap-1">
+                  <span className="text-2xl font-bold text-emerald-400">{wallet.currency}</span>
+                  <input
+                    type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className="w-40 text-3xl font-extrabold text-white text-center bg-transparent focus:outline-none"
+                  />
+                </div>
+
+                {/* Exchange Rate Indicator */}
+                <div className="text-[11px] font-mono text-emerald-400 bg-slate-950/80 border border-emerald-500/20 py-1 px-3 rounded-xl inline-block mx-auto">
+                  <span>Rate: 1 {currentCountry.code} = ৳{currentCountry.rateToBDT} BDT</span>
+                  {currentCountry.code !== 'BDT' && numAmount > 0 && (
+                    <span className="block text-slate-300 font-sans text-[10px] mt-0.5">
+                      ≈ ৳{(numAmount * currentCountry.rateToBDT).toLocaleString('en-US', { minimumFractionDigits: 2 })} BDT
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex justify-center gap-2 pt-2">
+                  {[1000, 2000, 5000, 10000].map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => setAmount(v.toString())}
+                      className="px-2.5 py-1 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-300 font-medium"
+                    >
+                      +{v}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Category Selection */}
           <div className="space-y-1.5">

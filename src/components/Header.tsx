@@ -121,6 +121,18 @@ export const Header: React.FC<HeaderProps> = ({
                   )}
                 </button>
               </div>
+
+              {/* Exchange Rate Info Pill */}
+              <div className="mt-2.5 inline-flex items-center gap-1.5 bg-black/30 backdrop-blur-md border border-white/10 px-2.5 py-1 rounded-xl text-[10px] font-mono text-emerald-200">
+                <span className="text-xs">{currentCountry.flag}</span>
+                <span className="font-bold">Rate:</span>
+                <span>1 {currentCountry.code} = ৳{currentCountry.rateToBDT} BDT</span>
+                {currentCountry.code !== 'BDT' && !wallet.hideBalance && (
+                  <span className="text-emerald-300 border-l border-white/20 pl-1.5 font-sans font-semibold">
+                    (≈ ৳{(wallet.balance * currentCountry.rateToBDT).toLocaleString('en-US', { maximumFractionDigits: 0 })} BDT)
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>

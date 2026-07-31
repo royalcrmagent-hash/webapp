@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Contact, Transaction, WalletState, UserAccount } from '../../types';
 import { BiometricModal } from '../BiometricModal';
+import { getCountryBySymbolOrCode } from '../../data/countries';
 
 interface SendMoneyViewProps {
   wallet: WalletState;
@@ -539,32 +540,46 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
           </div>
 
           {/* Amount Input */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 text-center">
-            <label className="text-xs text-slate-400 font-medium block mb-2">
-              Enter Transfer Amount
-            </label>
+          {(() => {
+            const currentCountry = getCountryBySymbolOrCode(wallet.currency);
+            const numAmount = parseFloat(amount || '0');
+            return (
+              <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 text-center">
+                <label className="text-xs text-slate-400 font-medium block mb-2">
+                  Enter Transfer Amount
+                </label>
 
-            <div className="flex items-center justify-center gap-1 my-2">
-              <span className="text-2xl font-bold text-emerald-400">{wallet.currency}</span>
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => {
-                  setAmount(e.target.value);
-                  setAmountError('');
-                }}
-                placeholder="0"
-                className="w-48 text-3xl font-extrabold text-white text-center bg-transparent focus:outline-none placeholder-slate-600"
-                autoFocus
-              />
-            </div>
+                <div className="flex items-center justify-center gap-1 my-2">
+                  <span className="text-2xl font-bold text-emerald-400">{wallet.currency}</span>
+                  <input
+                    type="number"
+                    value={amount}
+                    onChange={(e) => {
+                      setAmount(e.target.value);
+                      setAmountError('');
+                    }}
+                    placeholder="0"
+                    className="w-48 text-3xl font-extrabold text-white text-center bg-transparent focus:outline-none placeholder-slate-600"
+                    autoFocus
+                  />
+                </div>
 
-            {amountError && (
-              <p className="text-xs text-rose-400 flex items-center justify-center gap-1 mt-1">
-                <AlertCircle className="w-3.5 h-3.5" />
-                {amountError}
-              </p>
-            )}
+                {/* Live Exchange Rate Pill */}
+                <div className="text-[11px] font-mono text-emerald-400 bg-slate-950/80 border border-emerald-500/20 py-1 px-3 rounded-xl inline-block mx-auto mb-1">
+                  <span>Rate: 1 {currentCountry.code} = ৳{currentCountry.rateToBDT} BDT</span>
+                  {currentCountry.code !== 'BDT' && numAmount > 0 && (
+                    <span className="block text-slate-300 font-sans text-[10px] mt-0.5">
+                      ≈ ৳{(numAmount * currentCountry.rateToBDT).toLocaleString('en-US', { minimumFractionDigits: 2 })} BDT
+                    </span>
+                  )}
+                </div>
+
+                {amountError && (
+                  <p className="text-xs text-rose-400 flex items-center justify-center gap-1 mt-1">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    {amountError}
+                  </p>
+                )}
 
             {/* Fast Quick Amount Chips */}
             <div className="flex flex-wrap items-center justify-center gap-2 mt-4 pt-3 border-t border-slate-800/80">
@@ -587,6 +602,8 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
               ))}
             </div>
           </div>
+        );
+      })()}
 
           {/* Category / Label Selection */}
           <div className="space-y-1.5">

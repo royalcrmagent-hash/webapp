@@ -85,5 +85,15 @@ export function getCountryByCode(code: string): CountryCurrency | undefined {
 }
 
 export function getCountryBySymbol(symbol: string): CountryCurrency | undefined {
-  return ALL_COUNTRIES.find((c) => c.symbol === symbol);
+  return ALL_COUNTRIES.find((c) => c.symbol === symbol || c.code === symbol);
+}
+
+export function getCountryBySymbolOrCode(query: string): CountryCurrency {
+  if (!query) return ALL_COUNTRIES[0];
+  const q = query.toLowerCase();
+  const matchCode = ALL_COUNTRIES.find((c) => c.code.toLowerCase() === q);
+  if (matchCode) return matchCode;
+  const matchSymbol = ALL_COUNTRIES.find((c) => c.symbol === query || c.symbol.toLowerCase() === q);
+  if (matchSymbol) return matchSymbol;
+  return ALL_COUNTRIES[0];
 }

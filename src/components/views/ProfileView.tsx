@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Key, RefreshCw, Smartphone, DollarSign, ArrowLeft, Check, LogIn, ShieldAlert, UserCheck, Globe, ChevronRight } from 'lucide-react';
+import { ShieldCheck, Key, RefreshCw, Smartphone, DollarSign, ArrowLeft, Check, LogIn, ShieldAlert, UserCheck, Globe, ChevronRight, TrendingUp, ArrowRightLeft, Sparkles, CheckCircle2 } from 'lucide-react';
 import { WalletState, Currency, UserAccount } from '../../types';
 import { CountrySelectorModal } from './CountrySelectorModal';
-import { ALL_COUNTRIES, getCountryBySymbol, CountryCurrency } from '../../data/countries';
+import { ALL_COUNTRIES, getCountryBySymbolOrCode, CountryCurrency } from '../../data/countries';
 
 interface ProfileViewProps {
   wallet: WalletState;
@@ -31,8 +31,20 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showPinModal, setShowPinModal] = useState(false);
   const [showCountryModal, setShowCountryModal] = useState(false);
   const [newPinInput, setNewPinInput] = useState('');
+  const [calcAmount, setCalcAmount] = useState<string>('100');
+  const [rateChangedBanner, setRateChangedBanner] = useState<string | null>(null);
 
-  const currentCountry = getCountryBySymbol(wallet.currency) || ALL_COUNTRIES[0];
+  const currentCountry = getCountryBySymbolOrCode(wallet.currency);
+
+  const handleCurrencyChange = (c: CountryCurrency) => {
+    onUpdateCurrency(c.symbol as Currency);
+    setRateChangedBanner(
+      `Currency changed to ${c.flag} ${c.name} (${c.code}). Live Rate: 1 ${c.code} = ৳${c.rateToBDT} BDT`
+    );
+    setTimeout(() => {
+      setRateChangedBanner(null);
+    }, 6000);
+  };
 
   const handleSavePin = () => {
     if (newPinInput.length !== 4) {
@@ -45,8 +57,21 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     alert('Security PIN updated successfully!');
   };
 
+  const convertedValueBDT = (parseFloat(calcAmount || '0') * currentCountry.rateToBDT).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
   return (
     <div className="flex-1 flex flex-col bg-slate-950 text-slate-100 p-4 space-y-4">
+      {/* Rate Change Notification Banner */}
+      {rateChangedBanner && (
+        <div className="bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-emerald-500/10 border border-emerald-500/40 rounded-2xl p-3 flex items-center gap-2.5 text-xs text-emerald-300 animate-fadeIn shadow-lg">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+          <div className="flex-1 font-medium">{rateChangedBanner}</div>
+        </div>
+      )}
+
       {/* Profile Card Header */}
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-4 text-center space-y-2">
         <div className="relative w-16 h-16 mx-auto">
@@ -73,8 +98,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block px-1">
           Account & Security
         </label>
-
-
 
         {/* Super Admin Dashboard Button */}
         {currentUser?.role === 'admin' && (
@@ -130,31 +153,63 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </button>
           </div>
 
+          {/* Live Exchange Rate Card */}
+          <div className="bg-slate-950/80 border border-emerald-500/30 rounded-xl p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-bold">
+                <TrendingUp className="w-4 h-4" />
+                <span>Live Exchange Rate</span>
+              </div>
+              <span className="text-[10px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded-md border border-slate-800">
+                Updated Just Now
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between text-xs pt-1">
+              <div className="text-slate-300">
+                1 <strong className="text-white">{currentCountry.code}</strong> ({currentCountry.symbol}) =
+              </div>
+              <div className="text-emerald-400 font-mono font-black text-sm bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
+                ৳{currentCountry.rateToBDT} BDT
+              </div>
+            </div>
+
+            {/* Inverse rate & balance conversion */}
+            <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-400 pt-1 border-t border-slate-800/80 font-mono">
+              <div>
+                <span>1 BDT ≈ </span>
+                <strong className="text-slate-200">
+                  {(1 / currentCountry.rateToBDT).toFixed(4)} {currentCountry.code}
+                </strong>
+              </div>
+              <div className="text-right">
+                <span>Wallet Value: </span>
+                <strong className="text-emerald-400">
+                  ৳{(wallet.balance * currentCountry.rateToBDT).toLocaleString('en-US', { maximumFractionDigits: 0 })} BDT
+                </strong>
+              </div>
+            </div>
+          </div>
+
           {/* Quick Country Presets */}
           <div className="flex items-center gap-1.5 overflow-x-auto pt-1 pb-0.5 custom-scrollbar">
-            {[
-              { code: 'BDT', flag: '🇧🇩', symbol: '৳' },
-              { code: 'USD', flag: '🇺🇸', symbol: '$' },
-              { code: 'EUR', flag: '🇪🇺', symbol: '€' },
-              { code: 'GBP', flag: '🇬🇧', symbol: '£' },
-              { code: 'SAR', flag: '🇸🇦', symbol: '﷼' },
-              { code: 'AED', flag: '🇦🇪', symbol: 'د.إ' },
-              { code: 'MYR', flag: '🇲🇾', symbol: 'RM' },
-              { code: 'INR', flag: '🇮🇳', symbol: '₹' },
-            ].map((p) => (
-              <button
-                key={p.code}
-                onClick={() => onUpdateCurrency(p.symbol as Currency)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition shrink-0 flex items-center gap-1 border ${
-                  wallet.currency === p.symbol
-                    ? 'bg-emerald-500 text-slate-950 border-emerald-400'
-                    : 'bg-slate-950 text-slate-300 border-slate-800 hover:bg-slate-800'
-                }`}
-              >
-                <span>{p.flag}</span>
-                <span>{p.code}</span>
-              </button>
-            ))}
+            {ALL_COUNTRIES.slice(0, 10).map((p) => {
+              const isSelected = currentCountry.code === p.code;
+              return (
+                <button
+                  key={p.code}
+                  onClick={() => handleCurrencyChange(p)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition shrink-0 flex items-center gap-1 border ${
+                    isSelected
+                      ? 'bg-emerald-500 text-slate-950 border-emerald-400'
+                      : 'bg-slate-950 text-slate-300 border-slate-800 hover:bg-slate-800'
+                  }`}
+                >
+                  <span>{p.flag}</span>
+                  <span>{p.code}</span>
+                </button>
+              );
+            })}
             <button
               onClick={() => setShowCountryModal(true)}
               className="px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 bg-slate-950 border border-slate-800 hover:text-white shrink-0 flex items-center gap-1"
@@ -162,6 +217,52 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <span>More ({ALL_COUNTRIES.length})</span>
               <ChevronRight className="w-3 h-3" />
             </button>
+          </div>
+        </div>
+
+        {/* Live Exchange Rate Converter Widget */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-teal-500/10 text-teal-400 flex items-center justify-center">
+                <ArrowRightLeft className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-white">Currency Rate Calculator</h4>
+                <p className="text-[10px] text-slate-400">Calculate instant exchange rate to BDT</p>
+              </div>
+            </div>
+            <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+              {currentCountry.code} ➔ BDT
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            <div className="space-y-1">
+              <label className="text-[10px] text-slate-400 font-semibold block">
+                Amount in {currentCountry.code} ({currentCountry.symbol})
+              </label>
+              <div className="relative">
+                <span className="absolute left-2.5 top-2.5 text-xs text-slate-400 font-mono font-bold">
+                  {currentCountry.symbol}
+                </span>
+                <input
+                  type="number"
+                  value={calcAmount}
+                  onChange={(e) => setCalcAmount(e.target.value)}
+                  placeholder="100"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-7 pr-2 py-2 text-xs font-mono font-bold text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] text-slate-400 font-semibold block">Equivalent in BDT (৳)</label>
+              <div className="bg-slate-950 border border-emerald-500/30 rounded-xl px-3 py-2 text-xs font-mono font-black text-emerald-400 flex items-center justify-between">
+                <span>৳</span>
+                <span>{convertedValueBDT}</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -255,13 +356,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
         </div>
       )}
+
       {/* Country & Currency Selection Modal */}
       <CountrySelectorModal
         isOpen={showCountryModal}
         onClose={() => setShowCountryModal(false)}
         selectedCurrencySymbol={wallet.currency}
         onSelectCountry={(country) => {
-          onUpdateCurrency(country.symbol as Currency);
+          handleCurrencyChange(country);
         }}
       />
     </div>

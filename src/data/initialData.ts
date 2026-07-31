@@ -1,4 +1,46 @@
-import { WalletState, UserAccount } from '../types';
+import { WalletState, UserAccount, VirtualCard } from '../types';
+
+export const INITIAL_VIRTUAL_CARDS: VirtualCard[] = [
+  {
+    id: 'vc_visa_01',
+    type: 'visa',
+    cardName: 'Virtual Visa Platinum',
+    cardNumber: '4532 8820 9142 8892',
+    cardholderName: 'ACCOUNT HOLDER',
+    expiryDate: '08/29',
+    cvv: '849',
+    balance: 50.0,
+    isFrozen: false,
+    colorGradient: 'from-blue-700 via-indigo-800 to-slate-900',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'vc_master_01',
+    type: 'mastercard',
+    cardName: 'Virtual MasterCard Gold',
+    cardNumber: '5412 7201 4481 3219',
+    cardholderName: 'ACCOUNT HOLDER',
+    expiryDate: '11/28',
+    cvv: '312',
+    balance: 25.0,
+    isFrozen: false,
+    colorGradient: 'from-amber-600 via-orange-600 to-red-800',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'vc_amex_01',
+    type: 'amex',
+    cardName: 'Virtual Amex Centurion',
+    cardNumber: '3782 821094 41009',
+    cardholderName: 'ACCOUNT HOLDER',
+    expiryDate: '05/30',
+    cvv: '4921',
+    balance: 100.0,
+    isFrozen: false,
+    colorGradient: 'from-emerald-700 via-teal-800 to-slate-950',
+    createdAt: new Date().toISOString(),
+  },
+];
 
 export const INITIAL_SYSTEM_USERS: UserAccount[] = [
   {

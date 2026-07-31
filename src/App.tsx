@@ -18,8 +18,9 @@ import { LoginView } from './components/views/LoginView';
 import { SignupView } from './components/views/SignupView';
 import { ForgotPasswordView } from './components/views/ForgotPasswordView';
 import { AdminPanel } from './components/views/AdminPanel';
-import { INITIAL_WALLET_STATE, INITIAL_SYSTEM_USERS } from './data/initialData';
-import { WalletState, Transaction, Contact, Currency, UserAccount } from './types';
+import { VirtualCardsView } from './components/views/VirtualCardsView';
+import { INITIAL_WALLET_STATE, INITIAL_SYSTEM_USERS, INITIAL_VIRTUAL_CARDS } from './data/initialData';
+import { WalletState, Transaction, Contact, Currency, UserAccount, VirtualCard, VirtualCardType } from './types';
 import {
   Send,
   Sparkles,
@@ -37,6 +38,7 @@ import {
 const LOCAL_STORAGE_KEY = 'mobile_wallet_app_state_v1';
 const LOCAL_STORAGE_USERS_KEY = 'mobile_wallet_system_users_v1';
 const LOCAL_STORAGE_CURRENT_USER_KEY = 'mobile_wallet_current_user_v1';
+const LOCAL_STORAGE_VIRTUAL_CARDS_KEY = 'mobile_wallet_virtual_cards_v1';
 
 export default function App() {
   const [wallet, setWallet] = useState<WalletState>(() => {
@@ -167,6 +169,117 @@ export default function App() {
     phone: string;
     avatar?: string;
   } | null>(null);
+
+  // Virtual Cards State
+  const [virtualCards, setVirtualCards] = useState<VirtualCard[]>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_VIRTUAL_CARDS_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      // ignore
+    }
+    return INITIAL_VIRTUAL_CARDS;
+  });
+
+  const [selectedCardTypeFilter, setSelectedCardTypeFilter] = useState<VirtualCardType | 'all'>('all');
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_VIRTUAL_CARDS_KEY, JSON.stringify(virtualCards));
+    } catch (e) {
+      // ignore
+    }
+  }, [virtualCards]);
+
+  const handleIssueVirtualCard = (newCard: VirtualCard, initialDeposit: number) => {
+    setVirtualCards((prev) => [newCard, ...prev]);
+
+    if (initialDeposit > 0) {
+      const newTx: Transaction = {
+        id: `TX-VC-${Math.floor(100000 + Math.random() * 900000)}`,
+        type: 'bill_pay',
+        title: `Issued ${newCard.cardName}`,
+        recipientName: newCard.cardName,
+        recipientPhone: newCard.cardNumber.slice(-4),
+        amount: initialDeposit,
+        fee: 0,
+        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        status: 'completed',
+        category: 'Cards',
+      };
+
+      setWallet((prev) => ({
+        ...prev,
+        balance: prev.balance - initialDeposit,
+        transactions: [newTx, ...prev.transactions],
+      }));
+    }
+  };
+
+  const handleTopUpVirtualCard = (cardId: string, amount: number) => {
+    setVirtualCards((prev) =>
+      prev.map((c) => (c.id === cardId ? { ...c, balance: c.balance + amount } : c))
+    );
+
+    const card = virtualCards.find((c) => c.id === cardId);
+    const newTx: Transaction = {
+      id: `TX-VC-${Math.floor(100000 + Math.random() * 900000)}`,
+      type: 'sent',
+      title: `Top-Up ${card?.cardName || 'Virtual Card'}`,
+      recipientName: card?.cardName || 'Virtual Card',
+      recipientPhone: card?.cardNumber.slice(-4) || 'CARD',
+      amount: amount,
+      fee: 0,
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      status: 'completed',
+      category: 'Cards',
+    };
+
+    setWallet((prev) => ({
+      ...prev,
+      balance: prev.balance - amount,
+      transactions: [newTx, ...prev.transactions],
+    }));
+  };
+
+  const handleWithdrawVirtualCard = (cardId: string, amount: number) => {
+    setVirtualCards((prev) =>
+      prev.map((c) => (c.id === cardId ? { ...c, balance: c.balance - amount } : c))
+    );
+
+    const card = virtualCards.find((c) => c.id === cardId);
+    const newTx: Transaction = {
+      id: `TX-VC-${Math.floor(100000 + Math.random() * 900000)}`,
+      type: 'cash_in',
+      title: `Refund from ${card?.cardName || 'Virtual Card'}`,
+      recipientName: card?.cardName || 'Virtual Card',
+      recipientPhone: card?.cardNumber.slice(-4) || 'CARD',
+      amount: amount,
+      fee: 0,
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      status: 'completed',
+      category: 'Cards',
+    };
+
+    setWallet((prev) => ({
+      ...prev,
+      balance: prev.balance + amount,
+      transactions: [newTx, ...prev.transactions],
+    }));
+  };
+
+  const handleToggleFreezeVirtualCard = (cardId: string) => {
+    setVirtualCards((prev) =>
+      prev.map((c) => (c.id === cardId ? { ...c, isFrozen: !c.isFrozen } : c))
+    );
+  };
+
+  const handleDeleteVirtualCard = (cardId: string) => {
+    setVirtualCards((prev) => prev.filter((c) => c.id !== cardId));
+  };
 
   // Load database from Vercel Cloud Server API
   useEffect(() => {
@@ -427,6 +540,22 @@ export default function App() {
       setSelectedRecipientForSend(null);
       setCurrentView('send');
     }
+    else if (key === 'virtual_visa') {
+      setSelectedCardTypeFilter('visa');
+      setCurrentView('virtual_cards');
+    }
+    else if (key === 'mastercard') {
+      setSelectedCardTypeFilter('mastercard');
+      setCurrentView('virtual_cards');
+    }
+    else if (key === 'amex_card') {
+      setSelectedCardTypeFilter('amex');
+      setCurrentView('virtual_cards');
+    }
+    else if (key === 'virtual_cards') {
+      setSelectedCardTypeFilter('all');
+      setCurrentView('virtual_cards');
+    }
     else if (key === 'boost') {
       if (wallet.balance <= 0) {
         alert("You don't have sufficient balance");
@@ -639,6 +768,20 @@ export default function App() {
             wallet={wallet}
             onBack={() => setCurrentView('home')}
             onBillPaySuccess={handleBillPaySuccess}
+          />
+        )}
+
+        {currentView === 'virtual_cards' && (
+          <VirtualCardsView
+            wallet={wallet}
+            cards={virtualCards}
+            initialSelectedType={selectedCardTypeFilter}
+            onBack={() => setCurrentView('home')}
+            onIssueCard={handleIssueVirtualCard}
+            onTopUpCard={handleTopUpVirtualCard}
+            onWithdrawCard={handleWithdrawVirtualCard}
+            onToggleFreezeCard={handleToggleFreezeVirtualCard}
+            onDeleteCard={handleDeleteVirtualCard}
           />
         )}
 

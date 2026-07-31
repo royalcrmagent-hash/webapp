@@ -1,5 +1,21 @@
 export type Currency = string;
 
+export type VirtualCardType = 'visa' | 'mastercard' | 'amex';
+
+export interface VirtualCard {
+  id: string;
+  type: VirtualCardType;
+  cardName: string;
+  cardNumber: string;
+  cardholderName: string;
+  expiryDate: string;
+  cvv: string;
+  balance: number;
+  isFrozen: boolean;
+  colorGradient: string;
+  createdAt: string;
+}
+
 export type TransactionType = 'sent' | 'received' | 'cash_in' | 'cash_out' | 'bill_pay' | 'recharge';
 
 export interface Transaction {

@@ -20,7 +20,7 @@ interface QuickActionsProps {
 }
 
 export const QuickActions: React.FC<QuickActionsProps> = ({ onAction, isBoosting }) => {
-  const [activeCategory, setActiveCategory] = useState<'all' | 'transfer' | 'bills' | 'finance'>('all');
+  const [activeCategory, setActiveCategory] = useState<'all' | 'transfer' | 'cards' | 'bills' | 'finance'>('all');
 
   const actions = [
     {
@@ -32,6 +32,36 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ onAction, isBoosting
       badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
       highlight: true,
       desc: 'Instant P2P Transfer',
+    },
+    {
+      key: 'virtual_visa',
+      label: 'Virtual Visa',
+      icon: CreditCard,
+      category: 'cards',
+      gradient: 'from-blue-600 via-indigo-600 to-blue-800',
+      badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+      highlight: true,
+      desc: 'USD / Global Visa',
+    },
+    {
+      key: 'mastercard',
+      label: 'MasterCard',
+      icon: CreditCard,
+      category: 'cards',
+      gradient: 'from-amber-500 via-orange-600 to-red-600',
+      badgeColor: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+      highlight: true,
+      desc: 'Virtual MasterCard',
+    },
+    {
+      key: 'amex_card',
+      label: 'Amex Card',
+      icon: CreditCard,
+      category: 'cards',
+      gradient: 'from-emerald-600 via-teal-600 to-cyan-700',
+      badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+      highlight: true,
+      desc: 'American Express',
     },
     {
       key: 'boost',
@@ -97,6 +127,15 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ onAction, isBoosting
       badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
       desc: 'Direct to bank account',
     },
+    {
+      key: 'virtual_cards',
+      label: 'Cards Hub',
+      icon: CreditCard,
+      category: 'cards',
+      gradient: 'from-purple-600 to-indigo-700',
+      badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+      desc: 'Manage All Cards',
+    },
   ];
 
   const filteredActions = activeCategory === 'all'
@@ -118,6 +157,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ onAction, isBoosting
         <div className="flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
           {[
             { id: 'all', label: 'All' },
+            { id: 'cards', label: 'Cards' },
             { id: 'transfer', label: 'Transfer' },
             { id: 'bills', label: 'Bills' },
             { id: 'finance', label: 'Finance' },

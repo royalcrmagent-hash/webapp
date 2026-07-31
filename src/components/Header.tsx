@@ -8,6 +8,7 @@ interface HeaderProps {
   onOpenNotifications: () => void;
   onOpenProfile: () => void;
   onQuickSend: () => void;
+  onBoostBalance: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -16,6 +17,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenNotifications,
   onOpenProfile,
   onQuickSend,
+  onBoostBalance,
 }) => {
   const unreadCount = wallet.notifications.filter((n) => !n.read).length;
 
@@ -100,13 +102,21 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             </div>
 
-            <button
-              onClick={onQuickSend}
-              className="bg-white text-slate-950 hover:bg-emerald-50 px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-md active:scale-95"
-            >
-              <span>Send Money</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onBoostBalance}
+                className="bg-teal-500 text-white hover:bg-teal-400 px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center shadow-md active:scale-95"
+              >
+                Boost
+              </button>
+              <button
+                onClick={onQuickSend}
+                className="bg-white text-slate-950 hover:bg-emerald-50 px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-md active:scale-95"
+              >
+                <span>Send</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
       </div>

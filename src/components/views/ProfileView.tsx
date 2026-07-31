@@ -69,45 +69,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           Account & Security
         </label>
 
-        {/* Login Screen */}
-        <div
-          onClick={() => {
-            if (onNavigateToView) onNavigateToView('login');
-            else if (onOpenAuthModal) onOpenAuthModal('login');
-          }}
-          className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-800/80 transition"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold">
-              <LogIn className="w-4 h-4" />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-white">Login Screen</h4>
-              <p className="text-[11px] text-slate-400">Sign in to existing account or switch user</p>
-            </div>
-          </div>
-          <span className="text-xs text-emerald-400 font-medium">Sign In</span>
-        </div>
 
-        {/* Signup Screen */}
-        <div
-          onClick={() => {
-            if (onNavigateToView) onNavigateToView('signup');
-            else if (onOpenAuthModal) onOpenAuthModal('signup');
-          }}
-          className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-800/80 transition"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-teal-500/10 text-teal-400 flex items-center justify-center font-bold">
-              <UserCheck className="w-4 h-4" />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-white">Signup Screen</h4>
-              <p className="text-[11px] text-slate-400">Register a new wallet account with initial balance</p>
-            </div>
-          </div>
-          <span className="text-xs text-teal-400 font-medium">Register</span>
-        </div>
 
         {/* Super Admin Dashboard Button */}
         {currentUser?.role === 'admin' && (

@@ -108,6 +108,13 @@ export default function App() {
     }
   }, [systemUsers]);
 
+  const handleBoostBalance = () => {
+    setWallet((prev) => ({
+      ...prev,
+      balance: prev.balance + 100, // or some amount to increase
+    }));
+  };
+
   // Handlers
   const handleToggleHideBalance = () => {
     setWallet((prev) => ({ ...prev, hideBalance: !prev.hideBalance }));
@@ -282,6 +289,7 @@ export default function App() {
               onOpenNotifications={() => setCurrentView('notifications')}
               onOpenProfile={() => setCurrentView('profile')}
               onQuickSend={() => setCurrentView('send')}
+              onBoostBalance={handleBoostBalance}
             />
 
             {/* Core Services Grid */}

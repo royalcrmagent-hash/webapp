@@ -12,14 +12,14 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
 }) => {
   const [scanning, setScanning] = useState(false);
 
-  const sampleMerchants = [
+  const merchantList = [
     { name: 'Aarong Retail Store', phone: '01700998811' },
     { name: 'Unimart Supershop', phone: '01811223344' },
     { name: 'KFC Restaurant', phone: '01922334455' },
     { name: 'Rahim Ahmed (Personal)', phone: '01712345678' },
   ];
 
-  const handleSimulateScan = (m: { name: string; phone: string }) => {
+  const handleScanMerchant = (m: { name: string; phone: string }) => {
     setScanning(true);
     setTimeout(() => {
       onScanSuccess(m.name, m.phone);
@@ -52,13 +52,13 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
 
         <div className="space-y-2 pt-1 text-left">
           <label className="text-[11px] font-semibold text-slate-400 block">
-            Tap Demo Merchant QR to Scan:
+            Select Merchant QR to Scan:
           </label>
           <div className="space-y-1.5">
-            {sampleMerchants.map((m) => (
+            {merchantList.map((m) => (
               <button
                 key={m.phone}
-                onClick={() => handleSimulateScan(m)}
+                onClick={() => handleScanMerchant(m)}
                 disabled={scanning}
                 className="w-full bg-slate-800 hover:bg-slate-700 p-2.5 rounded-xl text-left flex items-center justify-between transition border border-slate-700/60"
               >

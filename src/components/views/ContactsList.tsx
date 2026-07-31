@@ -6,12 +6,14 @@ interface ContactsListProps {
   wallet: WalletState;
   onSelectContactForSend: (contact: Contact) => void;
   onAddContact: (contact: Contact) => void;
+  onDeleteContact?: (contactId: string) => void;
 }
 
 export const ContactsList: React.FC<ContactsListProps> = ({
   wallet,
   onSelectContactForSend,
   onAddContact,
+  onDeleteContact,
 }) => {
   const [search, setSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -25,16 +27,16 @@ export const ContactsList: React.FC<ContactsListProps> = ({
   );
 
   const handleSaveContact = () => {
-    if (!newName || !newPhone) {
-      alert('Enter both name and phone');
+    if (!newName.trim() || !newPhone.trim()) {
+      alert('Please enter both full name and phone number');
       return;
     }
     const newC: Contact = {
       id: `c_${Date.now()}`,
-      name: newName,
-      phone: newPhone,
-      avatar: `https://images.unsplash.com/photo-${1500000000000 + Math.floor(Math.random() * 100000)}?auto=format&fit=crop&q=80&w=150`,
-      favorite: false,
+      name: newName.trim(),
+      phone: newPhone.trim(),
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(newName.trim())}&background=10b981&color=020617&font-size=0.45&bold=true`,
+      favorite: true,
     };
     onAddContact(newC);
     setNewName('');
@@ -76,6 +78,9 @@ export const ContactsList: React.FC<ContactsListProps> = ({
               <img
                 src={c.avatar}
                 alt={c.name}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}&background=10b981&color=020617&font-size=0.45&bold=true`;
+                }}
                 className="w-10 h-10 rounded-full object-cover ring-2 ring-emerald-500/20"
               />
               <div>
@@ -87,13 +92,29 @@ export const ContactsList: React.FC<ContactsListProps> = ({
               </div>
             </div>
 
-            <button
-              onClick={() => onSelectContactForSend(c)}
-              className="bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-slate-950 border border-emerald-500/30 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1"
-            >
-              <Send className="w-3 h-3" />
-              <span>Send</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onSelectContactForSend(c)}
+                className="bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-slate-950 border border-emerald-500/30 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1"
+              >
+                <Send className="w-3 h-3" />
+                <span>Send</span>
+              </button>
+
+              {onDeleteContact && (
+                <button
+                  onClick={() => {
+                    if (confirm(`Delete ${c.name} from contacts?`)) {
+                      onDeleteContact(c.id);
+                    }
+                  }}
+                  className="p-1.5 text-slate-500 hover:text-rose-400 transition rounded-lg hover:bg-slate-800"
+                  title="Delete Contact"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
         ))}
       </div>

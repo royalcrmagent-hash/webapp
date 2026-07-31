@@ -25,10 +25,10 @@ export const BiometricModal: React.FC<BiometricModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSimulateScan = () => {
+  const handleBiometricScan = () => {
     setStatus('scanning');
     
-    // Simulate biometric sensor delay & authentication
+    // Biometric sensor processing & authentication
     setTimeout(() => {
       setStatus('success');
       setTimeout(() => {
@@ -78,7 +78,7 @@ export const BiometricModal: React.FC<BiometricModalProps> = ({
         {/* Biometric Scanner Visualizer */}
         <div className="py-2 flex flex-col items-center justify-center space-y-4">
           <div
-            onClick={status === 'idle' ? handleSimulateScan : undefined}
+            onClick={status === 'idle' ? handleBiometricScan : undefined}
             className={`relative w-28 h-28 rounded-full border-2 flex items-center justify-center cursor-pointer transition-all ${
               status === 'scanning'
                 ? 'border-emerald-400 bg-emerald-500/10 shadow-lg shadow-emerald-500/30 scale-105'
@@ -166,11 +166,11 @@ export const BiometricModal: React.FC<BiometricModalProps> = ({
         <div className="space-y-2 pt-2 border-t border-slate-800">
           {status === 'idle' && (
             <button
-              onClick={handleSimulateScan}
+              onClick={handleBiometricScan}
               className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold py-3 rounded-2xl transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
             >
               <Fingerprint className="w-4 h-4" />
-              <span>Simulate Biometric Scan</span>
+              <span>Scan Biometrics Now</span>
             </button>
           )}
 

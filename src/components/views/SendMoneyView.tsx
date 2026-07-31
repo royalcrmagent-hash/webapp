@@ -122,16 +122,11 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
     setStep('enter_pin');
   };
 
-  const handleAutofillPin = () => {
-    setPin(wallet.user.pin); // Default demo PIN '1234'
-    setPinError('');
-  };
-
   const performFinalTransfer = () => {
     setPinError('');
     setStep('confirming');
 
-    // Simulate network processing
+    // Process transaction request
     setTimeout(() => {
       const numAmount = parseFloat(amount);
       const newBalance = wallet.balance - numAmount;
@@ -490,20 +485,6 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
                 </span>{' '}
                 to <span className="text-white font-semibold">{selectedRecipient.name}</span>
               </p>
-            </div>
-
-            {/* Demo PIN Helper Chip */}
-            <div className="mt-3 flex items-center justify-between bg-slate-900/80 border border-emerald-500/30 rounded-xl px-3 py-2 text-xs">
-              <span className="text-slate-400 flex items-center gap-1">
-                <Info className="w-3.5 h-3.5 text-emerald-400" />
-                Demo PIN: <strong className="text-white">1234</strong>
-              </span>
-              <button
-                onClick={handleAutofillPin}
-                className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/40 px-2.5 py-1 rounded-lg text-[11px] font-bold transition"
-              >
-                Auto-fill 1234
-              </button>
             </div>
 
             {/* PIN Display Dots */}

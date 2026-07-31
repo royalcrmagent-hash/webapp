@@ -25,7 +25,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ onAction, isBoosting
   const actions = [
     {
       key: 'send',
-      label: 'Send Money',
+      label: 'Quick Send',
       icon: Send,
       category: 'transfer',
       gradient: 'from-emerald-500 to-teal-600',
@@ -161,7 +161,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ onAction, isBoosting
                 {act.label}
               </span>
               <span className="text-[9px] text-slate-400 mt-0.5 truncate w-full text-center">
-                {act.category}
+                {act.desc}
               </span>
             </button>
           );

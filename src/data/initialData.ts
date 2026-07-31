@@ -42,6 +42,27 @@ export const INITIAL_WALLET_STATE: WalletState = {
       avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150',
       favorite: true,
     },
+    {
+      id: 'c3',
+      name: 'Tanvir Hossain',
+      phone: '01712000222',
+      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150',
+      favorite: true,
+    },
+    {
+      id: 'c4',
+      name: 'Sadia Islam',
+      phone: '01911223344',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150',
+      favorite: true,
+    },
+    {
+      id: 'c5',
+      name: 'Karim Khan',
+      phone: '01822334455',
+      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150',
+      favorite: true,
+    },
   ],
   transactions: [],
   notifications: [

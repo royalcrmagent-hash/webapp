@@ -13,10 +13,9 @@ import {
   ArrowDownLeft,
   Sparkles,
   ShieldCheck,
-  Lock,
   Zap,
-  Info,
   Trash2,
+  Wifi,
 } from 'lucide-react';
 import { WalletState, VirtualCard, VirtualCardType } from '../../types';
 
@@ -80,7 +79,7 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
     const rawNumber = card.cardNumber.replace(/\s+/g, '');
     navigator.clipboard.writeText(rawNumber);
     setCopiedId(card.id);
-    showToast(`Card number copied for ${card.cardName}!`);
+    showToast(`Copied card number for ${card.cardName}!`);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
@@ -99,7 +98,7 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
 
     let prefix = '4532';
     let gradient = 'from-blue-700 via-indigo-800 to-slate-900';
-    let defaultLabel = 'Virtual Visa Card';
+    let defaultLabel = 'Virtual Visa Platinum';
     let cvvLength = 3;
     let cardLen = 16;
 
@@ -114,11 +113,9 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
       cvvLength = 4;
     }
 
-    // Generate random card digits
     const randomDigits = Math.floor(100000000000 + Math.random() * 900000000000).toString();
     const fullDigits = (prefix + randomDigits).slice(0, cardLen);
 
-    // Format card number with spaces
     let formattedNum = fullDigits;
     if (issueCardType === 'amex') {
       formattedNum = `${fullDigits.slice(0, 4)} ${fullDigits.slice(4, 10)} ${fullDigits.slice(10, 15)}`;
@@ -211,7 +208,7 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
         <div className="text-center">
           <h2 className="text-base font-extrabold text-white flex items-center justify-center gap-1.5">
             <CreditCard className="w-5 h-5 text-emerald-400" />
-            Virtual Cards
+            Virtual Cards Hub
           </h2>
           <p className="text-[10px] text-slate-400 font-medium">Visa, MasterCard & Amex Cards</p>
         </div>
@@ -253,7 +250,7 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
           <button
             key={tab.id}
             onClick={() => setFilterType(tab.id as any)}
-            className={`flex-1 min-w-[75px] py-2 px-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 ${
+            className={`flex-1 min-w-[80px] py-2 px-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 ${
               filterType === tab.id
                 ? 'bg-emerald-500 text-slate-950 shadow-md'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
@@ -265,7 +262,7 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
         ))}
       </div>
 
-      {/* Cards List */}
+      {/* Cards Display */}
       {filteredCards.length === 0 ? (
         <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-8 text-center space-y-3">
           <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center mx-auto text-slate-400">
@@ -273,7 +270,7 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
           </div>
           <h3 className="text-sm font-bold text-white">No {filterType.toUpperCase()} cards found</h3>
           <p className="text-xs text-slate-400 max-w-xs mx-auto">
-            Create your instant Virtual Visa, MasterCard, or Amex Card in seconds for online purchases & subscriptions.
+            Create an instant Virtual Visa, MasterCard, or Amex Card in seconds for global online payments.
           </p>
           <button
             onClick={() => {
@@ -287,72 +284,125 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
           </button>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-5">
           {filteredCards.map((card) => {
             const isVisible = !!showCardNumbers[card.id];
-            return (
-              <div
-                key={card.id}
-                className={`relative overflow-hidden rounded-3xl border transition-all duration-300 shadow-xl ${
-                  card.isFrozen
-                    ? 'bg-slate-900 border-slate-800 opacity-80'
-                    : `bg-gradient-to-br ${card.colorGradient} border-white/20 hover:border-white/40`
-                }`}
-              >
-                {/* Frozen Overlay Badge */}
-                {card.isFrozen && (
-                  <div className="absolute top-3 right-3 bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 text-[10px] font-black px-2.5 py-1 rounded-xl flex items-center gap-1 backdrop-blur-md">
-                    <Snowflake className="w-3 h-3 animate-spin" />
-                    <span>FROZEN</span>
-                  </div>
-                )}
 
-                <div className="p-5 space-y-4 text-white">
-                  {/* Card Top Row */}
-                  <div className="flex items-center justify-between">
+            // Brand style configurations for ultra-realistic rendering
+            let bgGradient = 'from-slate-950 via-blue-950 to-indigo-950 border-blue-500/30';
+            let chipStyle = 'from-amber-200 via-amber-400 to-yellow-300 border-amber-600/70';
+
+            if (card.type === 'mastercard') {
+              bgGradient = 'from-slate-950 via-red-950 to-amber-950 border-orange-500/30';
+              chipStyle = 'from-amber-200 via-yellow-400 to-amber-300 border-amber-600/70';
+            } else if (card.type === 'amex') {
+              bgGradient = 'from-slate-950 via-emerald-950 to-teal-950 border-emerald-500/30';
+              chipStyle = 'from-slate-200 via-slate-300 to-slate-100 border-slate-400/80';
+            }
+
+            return (
+              <div key={card.id} className="space-y-2">
+                {/* 3D Realistic Credit Card Face */}
+                <div
+                  className={`relative w-full aspect-[1.586/1] rounded-[24px] overflow-hidden p-5 sm:p-6 flex flex-col justify-between border shadow-2xl transition-all duration-300 bg-gradient-to-br ${
+                    card.isFrozen ? 'from-slate-900 via-slate-950 to-slate-900 border-cyan-500/40 opacity-80' : bgGradient
+                  }`}
+                >
+                  {/* Glossy Diagonal Light Reflection Sheen */}
+                  <div className="absolute -inset-full top-0 block w-1/2 h-full bg-gradient-to-r from-transparent via-white/10 to-transparent transform -skew-x-12 pointer-events-none" />
+
+                  {/* Frozen Overlay */}
+                  {card.isFrozen && (
+                    <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm z-20 flex flex-col items-center justify-center p-4 text-center">
+                      <div className="w-10 h-10 rounded-2xl bg-cyan-500/20 border border-cyan-400/50 flex items-center justify-center text-cyan-300 mb-2">
+                        <Snowflake className="w-5 h-5 animate-spin" />
+                      </div>
+                      <span className="text-xs font-black tracking-widest text-cyan-300 uppercase">Card Frozen</span>
+                      <p className="text-[10px] text-slate-400 mt-0.5">Click Unfreeze to reactivate card</p>
+                    </div>
+                  )}
+
+                  {/* Card Top Row: Nickname & Brand Logo */}
+                  <div className="flex items-start justify-between z-10">
                     <div>
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-white/70 block">
-                        {card.cardName}
-                      </span>
-                      <p className="text-xs font-extrabold text-white flex items-center gap-1.5 mt-0.5">
-                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
-                        <span>Instant Virtual Card</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-mono font-extrabold text-white/70 tracking-widest uppercase">
+                          {card.cardName}
+                        </span>
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      </div>
+                      <p className="text-[9px] font-medium text-white/50 tracking-wide mt-0.5">
+                        VIRTUAL INTERNATIONAL DEBIT
                       </p>
                     </div>
 
-                    {/* Card Brand Badge */}
-                    <div className="bg-black/30 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 font-mono font-black text-xs tracking-wider flex items-center gap-1">
+                    {/* Brand Realistic Logo */}
+                    <div className="flex items-center gap-2">
+                      {/* Card Balance Tag */}
+                      <div className="bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/10 text-right">
+                        <span className="text-[8px] font-bold text-white/60 block uppercase">Card Balance</span>
+                        <span className="text-xs font-black font-mono text-emerald-400">
+                          {wallet.currency}
+                          {card.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+
+                      {/* Brand Icon SVG */}
                       {card.type === 'visa' && (
-                        <span className="text-blue-300 font-extrabold italic tracking-tighter text-sm">VISA</span>
-                      )}
-                      {card.type === 'mastercard' && (
-                        <div className="flex items-center gap-0.5">
-                          <div className="w-3.5 h-3.5 rounded-full bg-red-500/90"></div>
-                          <div className="w-3.5 h-3.5 rounded-full bg-amber-400/90 -ml-2"></div>
-                          <span className="text-[10px] font-bold ml-1">Mastercard</span>
+                        <div className="bg-blue-600/30 backdrop-blur-md border border-blue-400/30 px-2.5 py-1 rounded-xl">
+                          <span className="font-extrabold italic text-sm text-blue-200 tracking-tighter">VISA</span>
                         </div>
                       )}
+
+                      {card.type === 'mastercard' && (
+                        <div className="bg-slate-900/60 backdrop-blur-md border border-white/10 px-2 py-1 rounded-xl flex items-center gap-0.5">
+                          <div className="w-4 h-4 rounded-full bg-red-600 shadow-md"></div>
+                          <div className="w-4 h-4 rounded-full bg-amber-500 shadow-md -ml-2"></div>
+                          <span className="text-[9px] font-black text-white/90 ml-1 font-mono">mastercard</span>
+                        </div>
+                      )}
+
                       {card.type === 'amex' && (
-                        <span className="text-emerald-300 font-black tracking-widest text-[11px]">AMEX</span>
+                        <div className="bg-emerald-950/80 backdrop-blur-md border border-emerald-400/40 px-2.5 py-1 rounded-xl">
+                          <span className="font-black text-xs text-emerald-300 tracking-widest">AMEX</span>
+                        </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Card Number & Copy */}
-                  <div className="bg-black/25 backdrop-blur-md border border-white/10 rounded-2xl p-3 flex items-center justify-between">
-                    <div className="font-mono text-sm sm:text-base font-bold tracking-widest text-slate-100">
+                  {/* Card Middle Row: EMV Metallic Chip & Contactless Waves */}
+                  <div className="flex items-center justify-between z-10 my-1">
+                    {/* Golden Metallic Chip */}
+                    <div className={`w-11 h-8 rounded-lg bg-gradient-to-tr ${chipStyle} shadow-md relative p-1 flex flex-col justify-between`}>
+                      <div className="w-full h-1/2 border-b border-amber-800/40 flex">
+                        <div className="w-1/2 border-r border-amber-800/40"></div>
+                      </div>
+                      <div className="w-full h-1/2 flex">
+                        <div className="w-1/2 border-r border-amber-800/40"></div>
+                      </div>
+                    </div>
+
+                    {/* Contactless Waves Icon */}
+                    <div className="flex items-center gap-1.5 text-white/60">
+                      <Wifi className="w-5 h-5 rotate-90 drop-shadow" />
+                    </div>
+                  </div>
+
+                  {/* Card Number Row */}
+                  <div className="z-10 bg-black/30 backdrop-blur-md border border-white/10 rounded-2xl px-3 py-2 flex items-center justify-between">
+                    <span className="font-mono text-sm sm:text-base font-black tracking-[0.2em] text-white drop-shadow">
                       {isVisible
                         ? card.cardNumber
                         : card.cardNumber.replace(/\d(?=\d{4})/g, '•')}
-                    </div>
+                    </span>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1">
                       <button
                         onClick={() => toggleShowNumber(card.id)}
                         className="p-1.5 bg-white/10 hover:bg-white/20 rounded-xl transition text-white/80 hover:text-white"
                         title={isVisible ? 'Hide Details' : 'Show Details'}
                       >
-                        {isVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {isVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                       </button>
 
                       <button
@@ -361,113 +411,110 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
                         title="Copy Card Number"
                       >
                         {copiedId === card.id ? (
-                          <Check className="w-4 h-4 text-emerald-400" />
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
                         ) : (
-                          <Copy className="w-4 h-4" />
+                          <Copy className="w-3.5 h-3.5" />
                         )}
                       </button>
                     </div>
                   </div>
 
-                  {/* Card Bottom Meta (Holder, Expiry, CVV, Balance) */}
-                  <div className="grid grid-cols-3 gap-2 text-[11px] pt-1">
+                  {/* Card Bottom Meta */}
+                  <div className="grid grid-cols-3 gap-2 text-[10px] z-10 pt-1">
                     <div>
-                      <span className="text-[9px] uppercase text-white/60 font-semibold block">Cardholder</span>
-                      <p className="font-bold text-white truncate">{card.cardholderName}</p>
+                      <span className="text-[8px] font-bold uppercase text-white/50 block">CARDHOLDER</span>
+                      <p className="font-mono font-bold text-white truncate drop-shadow">{card.cardholderName}</p>
                     </div>
 
                     <div>
-                      <span className="text-[9px] uppercase text-white/60 font-semibold block">Expires / CVV</span>
-                      <p className="font-mono font-bold text-white">
-                        {card.expiryDate} • {isVisible ? card.cvv : '•••'}
-                      </p>
+                      <span className="text-[8px] font-bold uppercase text-white/50 block">EXPIRES</span>
+                      <p className="font-mono font-bold text-white drop-shadow">{card.expiryDate}</p>
                     </div>
 
                     <div className="text-right">
-                      <span className="text-[9px] uppercase text-white/60 font-semibold block">Card Balance</span>
-                      <p className="font-mono font-black text-emerald-300 text-xs">
-                        {wallet.currency}
-                        {card.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      <span className="text-[8px] font-bold uppercase text-white/50 block">CVV CODE</span>
+                      <p className="font-mono font-bold text-emerald-300 drop-shadow">
+                        {isVisible ? card.cvv : '•••'}
                       </p>
                     </div>
                   </div>
+                </div>
 
-                  {/* Card Action Controls Row */}
-                  <div className="pt-2 border-t border-white/10 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
-                      {/* Freeze Button */}
-                      <button
-                        onClick={() => {
-                          onToggleFreezeCard(card.id);
-                          showToast(
-                            card.isFrozen
-                              ? `${card.cardName} Unfrozen!`
-                              : `${card.cardName} Frozen for safety!`
-                          );
-                        }}
-                        className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1 transition ${
-                          card.isFrozen
-                            ? 'bg-emerald-500 text-slate-950 hover:bg-emerald-400'
-                            : 'bg-white/10 text-white hover:bg-white/20'
-                        }`}
-                      >
-                        {card.isFrozen ? (
-                          <>
-                            <Flame className="w-3.5 h-3.5 fill-slate-950" />
-                            <span>Unfreeze</span>
-                          </>
-                        ) : (
-                          <>
-                            <Snowflake className="w-3.5 h-3.5" />
-                            <span>Freeze</span>
-                          </>
-                        )}
-                      </button>
-
-                      {/* Top Up Button */}
-                      <button
-                        onClick={() => {
-                          setTopUpCardTarget(card);
-                          setTopUpAmount('');
-                        }}
-                        disabled={card.isFrozen}
-                        className="px-2.5 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/30 text-emerald-200 rounded-xl text-[11px] font-bold flex items-center gap-1 transition disabled:opacity-50"
-                      >
-                        <ArrowDownLeft className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Top Up</span>
-                      </button>
-
-                      {/* Withdraw Button */}
-                      <button
-                        onClick={() => {
-                          setWithdrawCardTarget(card);
-                          setWithdrawAmount('');
-                        }}
-                        disabled={card.isFrozen || card.balance <= 0}
-                        className="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-[11px] font-bold flex items-center gap-1 transition disabled:opacity-50"
-                      >
-                        <ArrowUpRight className="w-3.5 h-3.5" />
-                        <span>Withdraw</span>
-                      </button>
-                    </div>
-
-                    {/* Delete Card Button */}
+                {/* Card Control Bar underneath card */}
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-2.5 flex items-center justify-between gap-2 shadow-md">
+                  <div className="flex items-center gap-2">
+                    {/* Freeze / Unfreeze */}
                     <button
                       onClick={() => {
-                        if (confirm(`Are you sure you want to close/delete ${card.cardName}? Remaining balance will be refunded.`)) {
-                          if (card.balance > 0) {
-                            onWithdrawCard(card.id, card.balance);
-                          }
-                          onDeleteCard(card.id);
-                          showToast(`${card.cardName} closed.`);
-                        }
+                        onToggleFreezeCard(card.id);
+                        showToast(
+                          card.isFrozen
+                            ? `${card.cardName} Unfrozen!`
+                            : `${card.cardName} Frozen safely!`
+                        );
                       }}
-                      className="p-1.5 text-rose-300 hover:text-rose-100 hover:bg-rose-500/20 rounded-xl transition"
-                      title="Close Virtual Card"
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition ${
+                        card.isFrozen
+                          ? 'bg-emerald-500 text-slate-950 hover:bg-emerald-400'
+                          : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
+                      }`}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      {card.isFrozen ? (
+                        <>
+                          <Flame className="w-3.5 h-3.5 fill-slate-950" />
+                          <span>Unfreeze</span>
+                        </>
+                      ) : (
+                        <>
+                          <Snowflake className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Freeze</span>
+                        </>
+                      )}
+                    </button>
+
+                    {/* Top Up */}
+                    <button
+                      onClick={() => {
+                        setTopUpCardTarget(card);
+                        setTopUpAmount('');
+                      }}
+                      disabled={card.isFrozen}
+                      className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 rounded-xl text-xs font-bold flex items-center gap-1.5 transition disabled:opacity-50"
+                    >
+                      <ArrowDownLeft className="w-3.5 h-3.5" />
+                      <span>Top Up</span>
+                    </button>
+
+                    {/* Withdraw */}
+                    <button
+                      onClick={() => {
+                        setWithdrawCardTarget(card);
+                        setWithdrawAmount('');
+                      }}
+                      disabled={card.isFrozen || card.balance <= 0}
+                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition disabled:opacity-50"
+                    >
+                      <ArrowUpRight className="w-3.5 h-3.5" />
+                      <span>Withdraw</span>
                     </button>
                   </div>
+
+                  {/* Close Card */}
+                  <button
+                    onClick={() => {
+                      if (confirm(`Are you sure you want to close/delete ${card.cardName}? Remaining balance will be refunded to your wallet.`)) {
+                        if (card.balance > 0) {
+                          onWithdrawCard(card.id, card.balance);
+                        }
+                        onDeleteCard(card.id);
+                        showToast(`${card.cardName} closed.`);
+                      }
+                    }}
+                    className="p-2 text-rose-400 hover:text-rose-200 hover:bg-rose-500/10 rounded-xl transition"
+                    title="Close Virtual Card"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             );

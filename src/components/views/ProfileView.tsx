@@ -39,7 +39,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const handleCurrencyChange = (c: CountryCurrency) => {
     onUpdateCurrency(c.symbol as Currency);
     setRateChangedBanner(
-      `Currency changed to ${c.flag} ${c.name} (${c.code}). Live Rate: 1 ${c.code} = ৳${c.rateToBDT} BDT`
+      `Currency changed to ${c.flag} ${c.name} (${c.code}). Live Rate: 1 USD = ${c.symbol}${c.rateToUSD} ${c.code}`
     );
     setTimeout(() => {
       setRateChangedBanner(null);
@@ -57,7 +57,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     alert('Security PIN updated successfully!');
   };
 
-  const convertedValueBDT = (parseFloat(calcAmount || '0') * currentCountry.rateToBDT).toLocaleString('en-US', {
+  const convertedValue = (parseFloat(calcAmount || '0') * currentCountry.rateToUSD).toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -167,25 +167,25 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
             <div className="flex items-center justify-between text-xs pt-1">
               <div className="text-slate-300">
-                1 <strong className="text-white">{currentCountry.code}</strong> ({currentCountry.symbol}) =
+                1 <strong className="text-white">USD</strong> ($) =
               </div>
               <div className="text-emerald-400 font-mono font-black text-sm bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
-                ৳{currentCountry.rateToBDT} BDT
+                {currentCountry.symbol}{currentCountry.rateToUSD} {currentCountry.code}
               </div>
             </div>
 
             {/* Inverse rate & balance conversion */}
             <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-400 pt-1 border-t border-slate-800/80 font-mono">
               <div>
-                <span>1 BDT ≈ </span>
+                <span>1 {currentCountry.code} ≈ </span>
                 <strong className="text-slate-200">
-                  {(1 / currentCountry.rateToBDT).toFixed(4)} {currentCountry.code}
+                  ${(1 / (currentCountry.rateToUSD || 1)).toFixed(4)} USD
                 </strong>
               </div>
               <div className="text-right">
-                <span>Wallet Value: </span>
+                <span>Value ({currentCountry.code}): </span>
                 <strong className="text-emerald-400">
-                  ৳{(wallet.balance * currentCountry.rateToBDT).toLocaleString('en-US', { maximumFractionDigits: 0 })} BDT
+                  {currentCountry.symbol}{(wallet.balance * currentCountry.rateToUSD).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </strong>
               </div>
             </div>
@@ -229,22 +229,22 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </div>
               <div>
                 <h4 className="text-xs font-bold text-white">Currency Rate Calculator</h4>
-                <p className="text-[10px] text-slate-400">Calculate instant exchange rate to BDT</p>
+                <p className="text-[10px] text-slate-400">Calculate instant exchange rate from USD</p>
               </div>
             </div>
             <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
-              {currentCountry.code} ➔ BDT
+              USD ➔ {currentCountry.code}
             </span>
           </div>
 
           <div className="grid grid-cols-2 gap-2 pt-1">
             <div className="space-y-1">
               <label className="text-[10px] text-slate-400 font-semibold block">
-                Amount in {currentCountry.code} ({currentCountry.symbol})
+                Amount in USD ($)
               </label>
               <div className="relative">
                 <span className="absolute left-2.5 top-2.5 text-xs text-slate-400 font-mono font-bold">
-                  {currentCountry.symbol}
+                  $
                 </span>
                 <input
                   type="number"
@@ -257,10 +257,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] text-slate-400 font-semibold block">Equivalent in BDT (৳)</label>
+              <label className="text-[10px] text-slate-400 font-semibold block">Equivalent in {currentCountry.code} ({currentCountry.symbol})</label>
               <div className="bg-slate-950 border border-emerald-500/30 rounded-xl px-3 py-2 text-xs font-mono font-black text-emerald-400 flex items-center justify-between">
-                <span>৳</span>
-                <span>{convertedValueBDT}</span>
+                <span>{currentCountry.symbol}</span>
+                <span>{convertedValue}</span>
               </div>
             </div>
           </div>

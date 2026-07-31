@@ -328,8 +328,8 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
       {/* Available Balance Pill */}
       {(() => {
         const currentCountry = getCountryBySymbolOrCode(wallet.currency);
-        const rate = currentCountry.rateToBDT || 1;
-        const displayBalance = rate > 0 ? wallet.balance / rate : wallet.balance;
+        const rateToUSD = currentCountry.rateToUSD || 1;
+        const displayBalance = wallet.balance * rateToUSD;
         return (
           <div className="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-3 mb-4 flex items-center justify-between shadow-inner">
             <div className="flex items-center gap-2">
@@ -573,10 +573,10 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
 
                 {/* Live Exchange Rate Pill */}
                 <div className="text-[11px] font-mono text-emerald-400 bg-slate-950/80 border border-emerald-500/20 py-1 px-3 rounded-xl inline-block mx-auto mb-1">
-                  <span>Rate: 1 {currentCountry.code} = ৳{currentCountry.rateToBDT} BDT</span>
-                  {currentCountry.code !== 'BDT' && numAmount > 0 && (
+                  <span>Rate: 1 USD = {currentCountry.symbol}{currentCountry.rateToUSD} {currentCountry.code}</span>
+                  {currentCountry.code !== 'USD' && numAmount > 0 && (
                     <span className="block text-slate-300 font-sans text-[10px] mt-0.5">
-                      ≈ ৳{(numAmount * currentCountry.rateToBDT).toLocaleString('en-US', { minimumFractionDigits: 2 })} BDT
+                      ≈ ${(numAmount / (currentCountry.rateToUSD || 1)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
                     </span>
                   )}
                 </div>
@@ -833,10 +833,7 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
                 <span className="text-slate-400">New Available Balance:</span>
                 <span className="text-emerald-400 font-bold">
                   {wallet.currency}
-                  {((getCountryBySymbolOrCode(wallet.currency).rateToBDT || 1) > 0
-                    ? wallet.balance / (getCountryBySymbolOrCode(wallet.currency).rateToBDT || 1)
-                    : wallet.balance
-                  ).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {(wallet.balance * (getCountryBySymbolOrCode(wallet.currency).rateToUSD || 1)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
             </div>

@@ -1,4 +1,4 @@
-export type Currency = '৳' | '$';
+export type Currency = string;
 
 export type TransactionType = 'sent' | 'received' | 'cash_in' | 'cash_out' | 'bill_pay' | 'recharge';
 

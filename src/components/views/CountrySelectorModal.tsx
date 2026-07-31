@@ -97,7 +97,7 @@ export const CountrySelectorModal: React.FC<CountrySelectorModalProps> = ({
                             {c.code} ({c.symbol})
                           </p>
                           <p className="text-[9px] text-emerald-400 font-mono font-bold mt-0.5">
-                            1 {c.code} = ৳{c.rateToBDT}
+                            1 USD = {c.symbol}{c.rateToUSD} {c.code}
                           </p>
                         </div>
                       </div>
@@ -147,7 +147,7 @@ export const CountrySelectorModal: React.FC<CountrySelectorModalProps> = ({
                           <p className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2 flex-wrap">
                             <span>Symbol: <strong className="text-white font-mono">{c.symbol}</strong></span>
                             <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.2 rounded font-mono font-bold text-[10px]">
-                              1 {c.code} = ৳{c.rateToBDT} BDT
+                              1 USD = {c.symbol}{c.rateToUSD} {c.code}
                             </span>
                           </p>
                         </div>

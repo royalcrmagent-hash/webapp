@@ -40,30 +40,73 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
     setTimeout(() => {
       const target = identifier.trim().toLowerCase();
-      const user = systemUsers.find(
-        (u) =>
-          u.email.toLowerCase() === target ||
-          u.phone.replaceAll(' ', '') === target ||
-          u.accountNo.toLowerCase() === target
-      );
+      const targetCleanDigits = identifier.replace(/\D/g, '');
 
-      if (!user) {
-        setError('Account not found. Please check your Email or Phone number.');
-        setIsLoading(false);
-        return;
-      }
+      let user: UserAccount | undefined;
 
-      if (user.isFrozen) {
-        setError('This account has been frozen by the System Admin. Please contact support.');
-        setIsLoading(false);
-        return;
-      }
+      // CASE A: Identifier is provided
+      if (target) {
+        user = systemUsers.find((u) => {
+          const emailMatch = u.email.toLowerCase() === target;
 
-      const matchPassword = user.password && user.password === password;
-      const matchPin = user.pin === password;
+          const phoneDigits = u.phone.replace(/\D/g, '');
+          const phoneMatch =
+            (targetCleanDigits.length > 2 && phoneDigits.includes(targetCleanDigits)) ||
+            u.phone.toLowerCase() === target ||
+            u.phone.replaceAll(' ', '') === target;
 
-      if (!matchPassword && !matchPin) {
-        setError('Invalid password or security PIN.');
+          const accMatch = u.accountNo.toLowerCase() === target;
+
+          const nameMatch =
+            u.name.toLowerCase() === target ||
+            u.name.replaceAll(' ', '').toLowerCase() === target;
+
+          const usernameMatch = (u as any).username?.toLowerCase() === target;
+
+          return emailMatch || phoneMatch || accMatch || nameMatch || usernameMatch;
+        });
+
+        if (!user) {
+          setError('Account not found. Please check your Username, Email, Phone, or Account Number.');
+          setIsLoading(false);
+          return;
+        }
+
+        if (user.isFrozen) {
+          setError('This account has been frozen by the System Admin. Please contact support.');
+          setIsLoading(false);
+          return;
+        }
+
+        // If password is also provided, verify match
+        if (password.trim()) {
+          const matchPassword = user.password && user.password === password.trim();
+          const matchPin = user.pin === password.trim();
+
+          if (!matchPassword && !matchPin) {
+            setError('Invalid password or security PIN.');
+            setIsLoading(false);
+            return;
+          }
+        }
+      } else if (password.trim()) {
+        // CASE B: ONLY Password provided (Identifier is empty)
+        const inputPass = password.trim();
+        user = systemUsers.find((u) => (u.password && u.password === inputPass) || u.pin === inputPass);
+
+        if (!user) {
+          setError('No account found matching this password or PIN.');
+          setIsLoading(false);
+          return;
+        }
+
+        if (user.isFrozen) {
+          setError('This account has been frozen by the System Admin. Please contact support.');
+          setIsLoading(false);
+          return;
+        }
+      } else {
+        setError('Please enter your Username, Email, Phone, Account Number, or Password.');
         setIsLoading(false);
         return;
       }
@@ -120,16 +163,18 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
           {/* Identifier Input */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-900 uppercase tracking-wider block">
-              Account Identifier
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-900 uppercase tracking-wider block">
+                Username / Email / Mobile / Acc#
+              </label>
+              <span className="text-[10px] text-slate-500 font-medium">Optional if password used</span>
+            </div>
             <div className="relative">
               <input
                 type="text"
-                required
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                placeholder="Email, Phone, or Acc#"
+                placeholder="Username, Email, Number, or Account No"
                 className="w-full bg-slate-50 border border-slate-200 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 text-slate-950 rounded-2xl px-5 py-4 text-sm placeholder-slate-400 transition outline-none"
               />
             </div>
@@ -152,7 +197,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
-                required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter password or 4-digit PIN"
@@ -166,6 +210,11 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+          </div>
+
+          <div className="bg-slate-100 p-3 rounded-2xl border border-slate-200/80 text-[11px] text-slate-600 flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>Login with <strong>Password only</strong>, or <strong>Username / Email / Mobile / Account Number</strong>.</span>
           </div>
 
           {/* Submit Button */}

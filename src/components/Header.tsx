@@ -18,8 +18,8 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const unreadCount = wallet.notifications.filter((n) => !n.read).length;
   const currentCountry = getCountryBySymbolOrCode(wallet.currency) || ALL_COUNTRIES[0];
-  const rate = currentCountry.rateToBDT || 1;
-  const displayBalance = rate > 0 ? wallet.balance / rate : wallet.balance;
+  const rateToUSD = currentCountry.rateToUSD || 1;
+  const displayBalance = wallet.balance * rateToUSD;
 
   return (
     <div className="space-y-3.5 px-4 pt-3 pb-1">
@@ -130,10 +130,10 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="mt-2.5 inline-flex items-center gap-1.5 bg-black/30 backdrop-blur-md border border-white/10 px-2.5 py-1 rounded-xl text-[10px] font-mono text-emerald-200">
                 <span className="text-xs">{currentCountry.flag}</span>
                 <span className="font-bold">Rate:</span>
-                <span>1 {currentCountry.code} = ৳{currentCountry.rateToBDT} BDT</span>
-                {currentCountry.code !== 'BDT' && !wallet.hideBalance && (
+                <span>1 USD = {currentCountry.symbol}{currentCountry.rateToUSD} {currentCountry.code}</span>
+                {currentCountry.code !== 'USD' && !wallet.hideBalance && (
                   <span className="text-emerald-300 border-l border-white/20 pl-1.5 font-sans font-semibold">
-                    (Base: ৳{wallet.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} BDT)
+                    (Base: ${wallet.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD)
                   </span>
                 )}
               </div>

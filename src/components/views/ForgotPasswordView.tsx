@@ -42,15 +42,25 @@ export const ForgotPasswordView: React.FC<ForgotPasswordViewProps> = ({
     setError('');
 
     const target = identifier.trim().toLowerCase();
-    const user = systemUsers.find(
-      (u) =>
-        u.email.toLowerCase() === target ||
-        u.phone.replaceAll(' ', '') === target ||
-        u.accountNo.toLowerCase() === target
-    );
+    const targetCleanDigits = identifier.replace(/\D/g, '');
+    const user = systemUsers.find((u) => {
+      const emailMatch = u.email.toLowerCase() === target;
+      const phoneDigits = u.phone.replace(/\D/g, '');
+      const phoneMatch =
+        (targetCleanDigits.length > 2 && phoneDigits.includes(targetCleanDigits)) ||
+        u.phone.toLowerCase() === target ||
+        u.phone.replaceAll(' ', '') === target;
+      const accMatch = u.accountNo.toLowerCase() === target;
+      const nameMatch =
+        u.name.toLowerCase() === target ||
+        u.name.replaceAll(' ', '').toLowerCase() === target;
+      const usernameMatch = (u as any).username?.toLowerCase() === target;
+
+      return emailMatch || phoneMatch || accMatch || nameMatch || usernameMatch;
+    });
 
     if (!user) {
-      setError('Account not found with this Email or Mobile Number.');
+      setError('Account not found with this Username, Email, Phone, or Account Number.');
       return;
     }
 
@@ -138,7 +148,7 @@ export const ForgotPasswordView: React.FC<ForgotPasswordViewProps> = ({
           <form onSubmit={handleRequestOtp} className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-300 block">
-                Email or Mobile Number
+                Username, Email, Phone, or Account Number
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -149,7 +159,7 @@ export const ForgotPasswordView: React.FC<ForgotPasswordViewProps> = ({
                   required
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder="e.g. alex@gmail.com or 01712000111"
+                  placeholder="Username, email, mobile, or acc#"
                   className="w-full bg-slate-900 border border-slate-800 focus:border-emerald-500 text-white rounded-2xl pl-10 pr-4 py-3 text-sm placeholder-slate-500 transition outline-none"
                 />
               </div>

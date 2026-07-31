@@ -18,7 +18,7 @@ export const INITIAL_SYSTEM_USERS: UserAccount[] = [
 
 export const INITIAL_WALLET_STATE: WalletState = {
   balance: 0.0,
-  currency: '৳',
+  currency: '$',
   hideBalance: false,
   user: {
     name: 'Account Holder',

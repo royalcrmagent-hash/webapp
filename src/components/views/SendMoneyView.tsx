@@ -349,8 +349,7 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
       {/* Available Balance Pill */}
       {(() => {
         const currentCountry = getCountryBySymbolOrCode(wallet.currency);
-        const rateToUSD = currentCountry.rateToUSD || 1;
-        const displayBalance = wallet.balance * rateToUSD;
+        const displayBalance = wallet.balance;
         return (
           <div className="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-3 mb-4 flex items-center justify-between shadow-inner">
             <div className="flex items-center gap-2">
@@ -854,7 +853,7 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
                 <span className="text-slate-400">New Available Balance:</span>
                 <span className="text-emerald-400 font-bold">
                   {wallet.currency}
-                  {(wallet.balance * (getCountryBySymbolOrCode(wallet.currency).rateToUSD || 1)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {wallet.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
             </div>

@@ -224,7 +224,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <div className="text-right">
                 <span>Value ({currentCountry.code}): </span>
                 <strong className="text-emerald-400">
-                  {currentCountry.symbol}{(wallet.balance * currentCountry.rateToUSD).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {currentCountry.symbol}{wallet.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </strong>
               </div>
             </div>

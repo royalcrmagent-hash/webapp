@@ -19,7 +19,7 @@ export const Header: React.FC<HeaderProps> = ({
   const unreadCount = wallet.notifications.filter((n) => !n.read).length;
   const currentCountry = getCountryBySymbolOrCode(wallet.currency) || ALL_COUNTRIES[0];
   const rateToUSD = currentCountry.rateToUSD || 1;
-  const displayBalance = wallet.balance * rateToUSD;
+  const displayBalance = wallet.balance;
 
   return (
     <div className="space-y-3.5 px-4 pt-3 pb-1">
@@ -133,7 +133,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <span>1 USD = {currentCountry.symbol}{currentCountry.rateToUSD} {currentCountry.code}</span>
                 {currentCountry.code !== 'USD' && !wallet.hideBalance && (
                   <span className="text-emerald-300 border-l border-white/20 pl-1.5 font-sans font-semibold">
-                    (Base: ${wallet.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD)
+                    (Base: ${(wallet.balance / rateToUSD).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD)
                   </span>
                 )}
               </div>

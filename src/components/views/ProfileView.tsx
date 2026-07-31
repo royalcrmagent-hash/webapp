@@ -30,7 +30,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 }) => {
   const [showPinModal, setShowPinModal] = useState(false);
   const [showCountryModal, setShowCountryModal] = useState(false);
+  const [oldPinInput, setOldPinInput] = useState('');
   const [newPinInput, setNewPinInput] = useState('');
+  const [pinErrorMsg, setPinErrorMsg] = useState<string | null>(null);
   const [calcAmount, setCalcAmount] = useState<string>('100');
   const [rateChangedBanner, setRateChangedBanner] = useState<string | null>(null);
 
@@ -46,14 +48,32 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }, 6000);
   };
 
+  const handleOpenPinModal = () => {
+    setOldPinInput('');
+    setNewPinInput('');
+    setPinErrorMsg(null);
+    setShowPinModal(true);
+  };
+
   const handleSavePin = () => {
-    if (newPinInput.length !== 4) {
-      alert('PIN must be exactly 4 digits');
+    setPinErrorMsg(null);
+    if (!oldPinInput || oldPinInput.trim() !== wallet.user.pin) {
+      setPinErrorMsg('Current PIN is incorrect. Please try again.');
+      return;
+    }
+    if (newPinInput.length !== 4 || !/^\d{4}$/.test(newPinInput)) {
+      setPinErrorMsg('New PIN must be exactly 4 numeric digits.');
+      return;
+    }
+    if (newPinInput === oldPinInput) {
+      setPinErrorMsg('New PIN cannot be the same as Current PIN.');
       return;
     }
     onUpdatePin(newPinInput);
     setShowPinModal(false);
+    setOldPinInput('');
     setNewPinInput('');
+    setPinErrorMsg(null);
     alert('Security PIN updated successfully!');
   };
 
@@ -268,7 +288,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
         {/* Change PIN */}
         <div
-          onClick={() => setShowPinModal(true)}
+          onClick={handleOpenPinModal}
           className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-800/80 transition"
         >
           <div className="flex items-center gap-3">
@@ -326,31 +346,59 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {/* PIN Change Modal */}
       {showPinModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 w-full max-w-xs space-y-3">
-            <h3 className="text-sm font-bold text-white">Change Security PIN</h3>
-            <div>
-              <label className="text-[11px] text-slate-400 block mb-1">Enter New 4-Digit PIN</label>
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 w-full max-w-xs space-y-3.5 shadow-2xl">
+            <div className="flex items-center gap-2 border-b border-slate-800 pb-2.5">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center">
+                <Key className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">Change Security PIN</h3>
+                <p className="text-[10px] text-slate-400">Verify current PIN to setup new PIN</p>
+              </div>
+            </div>
+
+            {pinErrorMsg && (
+              <div className="bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs p-2.5 rounded-xl font-medium text-center">
+                {pinErrorMsg}
+              </div>
+            )}
+
+            <div className="space-y-1">
+              <label className="text-[11px] text-slate-300 font-semibold block">Enter Current 4-Digit PIN</label>
+              <input
+                type="password"
+                maxLength={4}
+                value={oldPinInput}
+                onChange={(e) => setOldPinInput(e.target.value)}
+                placeholder="••••"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-center text-lg font-mono tracking-widest text-white focus:outline-none focus:border-amber-500"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] text-slate-300 font-semibold block">Enter New 4-Digit PIN</label>
               <input
                 type="password"
                 maxLength={4}
                 value={newPinInput}
                 onChange={(e) => setNewPinInput(e.target.value)}
-                placeholder="e.g. 5678"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-center text-lg font-mono tracking-widest text-white"
+                placeholder="••••"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-center text-lg font-mono tracking-widest text-white focus:outline-none focus:border-emerald-500"
               />
             </div>
-            <div className="flex gap-2 pt-2">
+
+            <div className="flex gap-2 pt-1">
               <button
                 onClick={() => setShowPinModal(false)}
-                className="flex-1 bg-slate-800 text-slate-300 py-2 rounded-xl text-xs font-semibold"
+                className="flex-1 bg-slate-800 text-slate-300 py-2.5 rounded-xl text-xs font-semibold hover:bg-slate-700 transition"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSavePin}
-                className="flex-1 bg-emerald-500 text-slate-950 py-2 rounded-xl text-xs font-bold"
+                className="flex-1 bg-emerald-500 text-slate-950 py-2.5 rounded-xl text-xs font-bold hover:bg-emerald-400 transition"
               >
-                Save PIN
+                Update PIN
               </button>
             </div>
           </div>

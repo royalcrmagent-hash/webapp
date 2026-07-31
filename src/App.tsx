@@ -529,12 +529,6 @@ export default function App() {
     setWallet((prev) => ({ ...prev, currency: curr }));
   };
 
-  const handleResetWallet = () => {
-    setWallet(INITIAL_WALLET_STATE);
-    localStorage.removeItem(LOCAL_STORAGE_KEY);
-    setCurrentView('home');
-  };
-
   const handleQuickAction = (key: string) => {
     if (key === 'send') {
       setSelectedRecipientForSend(null);
@@ -814,7 +808,6 @@ export default function App() {
             currentUser={currentUser}
             onUpdatePin={handleUpdatePin}
             onUpdateCurrency={handleUpdateCurrency}
-            onResetWallet={handleResetWallet}
             onLogout={handleLogout}
             onOpenAuthModal={(mode) => {
               setAuthInitialMode(mode || 'login');

@@ -9,7 +9,6 @@ interface ProfileViewProps {
   currentUser?: UserAccount | null;
   onUpdatePin: (newPin: string) => void;
   onUpdateCurrency: (curr: Currency) => void;
-  onResetWallet: () => void;
   onOpenAuthModal?: (mode?: 'login' | 'signup') => void;
   onOpenAdminPanel?: () => void;
   onNavigateToView?: (view: string) => void;
@@ -22,7 +21,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   currentUser,
   onUpdatePin,
   onUpdateCurrency,
-  onResetWallet,
   onOpenAuthModal,
   onOpenAdminPanel,
   onNavigateToView,
@@ -303,27 +301,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
           </div>
           <span className="text-xs text-emerald-400 font-medium">Change</span>
-        </div>
-
-        {/* Reset Wallet Data */}
-        <div
-          onClick={() => {
-            if (confirm('Reset wallet balance and transactions to initial values?')) {
-              onResetWallet();
-            }
-          }}
-          className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-800/80 transition"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center">
-              <RefreshCw className="w-4 h-4" />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-white">Reset Wallet State</h4>
-              <p className="text-[11px] text-slate-400">Restore default balance & transaction history</p>
-            </div>
-          </div>
-          <span className="text-xs text-rose-400 font-medium">Reset</span>
         </div>
 
         {/* Logout Button */}

@@ -21,6 +21,7 @@ import { AdminPanel } from './components/views/AdminPanel';
 import { VirtualCardsView } from './components/views/VirtualCardsView';
 import { PopupDialog, DialogType } from './components/ui/PopupDialog';
 import { INITIAL_WALLET_STATE, INITIAL_SYSTEM_USERS, INITIAL_VIRTUAL_CARDS } from './data/initialData';
+import { getCountryBySymbolOrCode } from './data/countries';
 import { WalletState, Transaction, Contact, Currency, UserAccount, VirtualCard, VirtualCardType } from './types';
 import {
   Send,
@@ -546,8 +547,44 @@ export default function App() {
     }));
   };
 
-  const handleUpdateCurrency = (curr: Currency) => {
-    setWallet((prev) => ({ ...prev, currency: curr }));
+  const handleUpdateCurrency = (newSymbolOrCode: Currency) => {
+    setWallet((prev) => {
+      const oldCountry = getCountryBySymbolOrCode(prev.currency);
+      const newCountry = getCountryBySymbolOrCode(newSymbolOrCode);
+      
+      const conversionRate = newCountry.rateToUSD / oldCountry.rateToUSD;
+
+      return {
+        ...prev,
+        balance: prev.balance * conversionRate,
+        currency: newSymbolOrCode,
+        transactions: prev.transactions.map(txn => ({
+          ...txn,
+          amount: txn.amount * conversionRate,
+          fee: txn.fee * conversionRate
+        }))
+      };
+    });
+
+    setVirtualCards((prev) => {
+      const oldCountry = getCountryBySymbolOrCode(wallet.currency);
+      const newCountry = getCountryBySymbolOrCode(newSymbolOrCode);
+      const conversionRate = newCountry.rateToUSD / oldCountry.rateToUSD;
+      return prev.map(card => ({
+        ...card,
+        balance: card.balance * conversionRate
+      }));
+    });
+
+    setSystemUsers((prev) => {
+      const oldCountry = getCountryBySymbolOrCode(wallet.currency);
+      const newCountry = getCountryBySymbolOrCode(newSymbolOrCode);
+      const conversionRate = newCountry.rateToUSD / oldCountry.rateToUSD;
+      return prev.map(user => ({
+        ...user,
+        balance: user.balance * conversionRate
+      }));
+    });
   };
 
   const handleQuickAction = (key: string) => {

@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useInactivityLogout } from './hooks/useInactivityLogout';
-import { PhoneFrame } from './components/PhoneFrame';
 import { Header } from './components/Header';
 import { QuickActions } from './components/QuickActions';
 import { BottomNav } from './components/BottomNav';
-import { BoostChartD3 } from './components/BoostChartD3';
+
 import { SendMoneyView } from './components/views/SendMoneyView';
 import { AddMoneyView } from './components/views/AddMoneyView';
 import { CashOutView } from './components/views/CashOutView';
@@ -81,18 +80,36 @@ export default function App() {
   const [isBoosting, setIsBoosting] = useState<boolean>(false);
   const [boostMultiplier, setBoostMultiplier] = useState<number>(1);
   const [balanceHistory, setBalanceHistory] = useState<{ time: number; balance: number }[]>(() => [
-    { time: Date.now() - 3000, balance: 10000 },
-    { time: Date.now(), balance: 10000 },
+    { time: Date.now() - 3000, balance: wallet.balance },
+    { time: Date.now(), balance: wallet.balance },
   ]);
+
+  useEffect(() => {
+    if (wallet.balance <= 0 && isBoosting) {
+      setIsBoosting(false);
+    }
+  }, [wallet.balance, isBoosting]);
 
   // Continuous boost effect based on nanosecond rate (approx 0.00000000000026746% per ns * multiplier)
   useEffect(() => {
     if (!isBoosting) return;
+    if (wallet.balance <= 0) {
+      setIsBoosting(false);
+      return;
+    }
     const interval = setInterval(() => {
       setWallet((prev) => {
+        if (prev.balance <= 0) {
+          setIsBoosting(false);
+          return prev;
+        }
         // Rate per ns: 2.6746e-13 % * multiplier
         const growthRatePerInterval = prev.balance * 0.00000013373 * boostMultiplier;
-        const addAmount = Math.max(0.1 * boostMultiplier, growthRatePerInterval);
+        const addAmount = prev.balance > 0 ? Math.max(0.01 * boostMultiplier, growthRatePerInterval) : 0;
+        if (addAmount <= 0 || prev.balance <= 0) {
+          setIsBoosting(false);
+          return prev;
+        }
         const newBalance = prev.balance + addAmount;
 
         setBalanceHistory((hist) => {
@@ -108,7 +125,7 @@ export default function App() {
       });
     }, 50);
     return () => clearInterval(interval);
-  }, [isBoosting, boostMultiplier]);
+  }, [isBoosting, boostMultiplier, wallet.balance]);
 
   // Biometric Security Policy Settings
   const [biometricThreshold, setBiometricThreshold] = useState<number>(1000);
@@ -177,6 +194,11 @@ export default function App() {
   }, [currentUser]);
 
   const handleBoostBalance = () => {
+    if (wallet.balance <= 0) {
+      setIsBoosting(false);
+      alert("You don't have sufficient balance");
+      return;
+    }
     setIsBoosting((prev) => !prev);
   };
 
@@ -323,6 +345,13 @@ export default function App() {
       setSelectedRecipientForSend(null);
       setCurrentView('send');
     }
+    else if (key === 'boost') {
+      if (wallet.balance <= 0) {
+        alert("You don't have sufficient balance");
+        return;
+      }
+      handleBoostBalance();
+    }
     else if (key === 'add_money') setCurrentView('add_money');
     else if (key === 'cash_out') setCurrentView('cash_out');
     else if (key === 'bill_pay') setCurrentView('bill_pay');
@@ -342,8 +371,8 @@ export default function App() {
   };
 
   return (
-    <PhoneFrame activeTabTitle={currentView}>
-      <div className="flex-1 flex flex-col justify-between">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between max-w-2xl mx-auto shadow-2xl relative">
+      <div className="flex-1 flex flex-col justify-between pb-20">
         {/* VIEW ROUTING */}
         {currentView === 'home' && (
           <div className="space-y-4 pb-4">
@@ -353,22 +382,12 @@ export default function App() {
               onToggleHideBalance={handleToggleHideBalance}
               onOpenNotifications={() => setCurrentView('notifications')}
               onOpenProfile={() => setCurrentView('profile')}
-              onQuickSend={() => setCurrentView('send')}
-              onBoostBalance={handleBoostBalance}
-              isBoosting={isBoosting}
             />
 
             {/* Core Services Grid */}
-            <QuickActions onAction={handleQuickAction} />
+            <QuickActions onAction={handleQuickAction} isBoosting={isBoosting} />
 
-            {/* D3 Real-Time Balance Growth & Compounding Chart */}
-            <BoostChartD3
-              history={balanceHistory}
-              isBoosting={isBoosting}
-              boostMultiplier={boostMultiplier}
-              onMultiplierChange={setBoostMultiplier}
-              onToggleBoost={handleBoostBalance}
-            />
+
 
             {/* Quick Send Money Contact Avatars Banner */}
             <div className="px-4 py-1">
@@ -651,6 +670,6 @@ export default function App() {
           initialMode={authInitialMode}
         />
       </div>
-    </PhoneFrame>
+    </div>
   );
 }

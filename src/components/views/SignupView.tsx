@@ -33,7 +33,6 @@ export const SignupView: React.FC<SignupViewProps> = ({
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [pin, setPin] = useState('');
-  const [initialBalance, setInitialBalance] = useState('15000');
   const [agreedTerms, setAgreedTerms] = useState(true);
   const [error, setError] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
@@ -80,7 +79,7 @@ export const SignupView: React.FC<SignupViewProps> = ({
         accountNo: generatedAccountNo,
         pin: pin.trim(),
         password: password.trim(),
-        balance: parseFloat(initialBalance) || 10000,
+        balance: 0,
         role: 'user',
         isFrozen: false,
         createdAt: new Date().toISOString(),
@@ -135,8 +134,7 @@ export const SignupView: React.FC<SignupViewProps> = ({
             <div className="space-y-1">
               <h3 className="text-xl font-black text-white">Registration Successful!</h3>
               <p className="text-xs text-slate-300">
-                Your digital wallet account has been created with initial deposit of ৳
-                {parseFloat(initialBalance).toLocaleString()}.
+                Your digital wallet account has been successfully created. You can now log in and add funds.
               </p>
             </div>
             <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 text-left space-y-1 text-xs">
@@ -270,30 +268,6 @@ export const SignupView: React.FC<SignupViewProps> = ({
                       className="w-full bg-slate-900 border border-slate-800 focus:border-emerald-500 text-white rounded-2xl pl-8 pr-2 py-2.5 text-xs placeholder-slate-500 transition outline-none font-mono text-center tracking-widest"
                     />
                   </div>
-                </div>
-              </div>
-
-              {/* Initial Starting Balance */}
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-300 flex justify-between">
-                  <span>Initial Starting Balance (Demo Deposit)</span>
-                  <span className="text-emerald-400 font-bold">৳{parseFloat(initialBalance || '0').toLocaleString()}</span>
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {['5000', '15000', '25000'].map((amt) => (
-                    <button
-                      key={amt}
-                      type="button"
-                      onClick={() => setInitialBalance(amt)}
-                      className={`py-1.5 px-2 rounded-xl text-xs font-bold transition border ${
-                        initialBalance === amt
-                          ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
-                          : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      ৳{parseFloat(amt).toLocaleString()}
-                    </button>
-                  ))}
                 </div>
               </div>
 

@@ -143,10 +143,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
             <button
               onClick={onLogout}
-              className="bg-slate-800 hover:bg-slate-700 text-slate-300 p-2 rounded-xl transition"
+              className="bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md"
               title="Logout Admin"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Admin Logout</span>
             </button>
           </div>
         </div>
@@ -262,7 +263,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       </div>
                       <p className="text-[11px] text-slate-400">{usr.email}</p>
                       <p className="text-[10px] text-slate-500 font-mono">
-                        {usr.phone} • PIN: {usr.pin}
+                        {usr.phone}
                       </p>
                     </div>
                   </div>

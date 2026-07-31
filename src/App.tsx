@@ -137,6 +137,12 @@ export default function App() {
 
   const handleLogout = () => {
     setCurrentUser(null);
+    localStorage.removeItem(LOCAL_STORAGE_CURRENT_USER_KEY);
+    try {
+      sessionStorage.clear();
+    } catch (e) {
+      // ignore
+    }
     setCurrentView('login');
   };
 
@@ -162,6 +168,35 @@ export default function App() {
     avatar?: string;
   } | null>(null);
 
+  // Load database from Vercel Cloud Server API
+  useEffect(() => {
+    async function loadServerDB() {
+      try {
+        const res = await fetch('/api/db');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.db) {
+            if (Array.isArray(data.db.systemUsers) && data.db.systemUsers.length > 0) {
+              setSystemUsers(data.db.systemUsers);
+            }
+            if (Array.isArray(data.db.contacts)) {
+              setWallet((prev) => ({ ...prev, contacts: data.db.contacts }));
+            }
+            if (Array.isArray(data.db.transactions)) {
+              setWallet((prev) => ({ ...prev, transactions: data.db.transactions }));
+            }
+            if (Array.isArray(data.db.notifications)) {
+              setWallet((prev) => ({ ...prev, notifications: data.db.notifications }));
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load DB from Vercel server:', err);
+      }
+    }
+    loadServerDB();
+  }, []);
+
   // Save wallet state on updates
   useEffect(() => {
     try {
@@ -179,6 +214,27 @@ export default function App() {
       console.error('Failed to save system users:', e);
     }
   }, [systemUsers]);
+
+  // Sync to Vercel Server Database whenever users, contacts, transactions change
+  useEffect(() => {
+    const syncWithServer = async () => {
+      try {
+        await fetch('/api/db/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            systemUsers,
+            contacts: wallet.contacts,
+            transactions: wallet.transactions,
+            notifications: wallet.notifications,
+          }),
+        });
+      } catch (e) {
+        console.error('Error syncing data with Vercel server:', e);
+      }
+    };
+    syncWithServer();
+  }, [systemUsers, wallet.contacts, wallet.transactions, wallet.notifications]);
 
   // Save current user on updates
   useEffect(() => {
@@ -227,11 +283,20 @@ export default function App() {
     }
   };
 
-  const handleRegisterUser = (newUser: UserAccount) => {
+  const handleRegisterUser = async (newUser: UserAccount) => {
     setSystemUsers((prev) => [newUser, ...prev]);
+    try {
+      await fetch('/api/users/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUser),
+      });
+    } catch (e) {
+      console.error('Failed to register user on server:', e);
+    }
   };
 
-  const handleUpdateUserCredentials = (emailOrPhone: string, newPass: string, newPin: string) => {
+  const handleUpdateUserCredentials = async (emailOrPhone: string, newPass: string, newPin: string) => {
     setSystemUsers((prev) =>
       prev.map((u) => {
         if (
@@ -243,6 +308,16 @@ export default function App() {
         return u;
       })
     );
+
+    try {
+      await fetch('/api/auth/update-credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emailOrPhone, newPass, newPin }),
+      });
+    } catch (e) {
+      console.error('Failed to update credentials on server:', e);
+    }
   };
 
   const handleSendMoneySuccess = (txn: Transaction, newBalance: number) => {
@@ -539,11 +614,7 @@ export default function App() {
               setBiometricRequired(required);
             }}
             onSwitchToUserWallet={() => setCurrentView('home')}
-            onLogout={() => {
-              const defaultUser = systemUsers.find((u) => u.email === 'alex@gmail.com') || systemUsers[1];
-              if (defaultUser) setCurrentUser(defaultUser);
-              setCurrentView('home');
-            }}
+            onLogout={handleLogout}
           />
         )}
 

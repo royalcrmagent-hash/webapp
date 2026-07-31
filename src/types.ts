@@ -21,6 +21,8 @@ export interface Contact {
   id: string;
   name: string;
   phone: string;
+  username?: string;
+  email?: string;
   avatar: string;
   favorite?: boolean;
 }

@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
 import { UserAccount } from '../../types';
+import { ALL_COUNTRIES, CountryCurrency } from '../../data/countries';
 import {
   User,
   Mail,
   Phone,
   Lock,
   KeyRound,
-  DollarSign,
   ShieldCheck,
   ArrowRight,
   Sparkles,
   AlertCircle,
   CheckCircle2,
   X,
+  Globe,
+  ChevronDown,
+  Search,
 } from 'lucide-react';
 
 interface SignupViewProps {
@@ -33,33 +36,66 @@ export const SignupView: React.FC<SignupViewProps> = ({
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [pin, setPin] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState<CountryCurrency>(ALL_COUNTRIES[0]);
+  const [showCountryModal, setShowCountryModal] = useState(false);
+  const [countrySearch, setCountrySearch] = useState('');
   const [agreedTerms, setAgreedTerms] = useState(true);
   const [error, setError] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Filter countries for modal search
+  const filteredCountries = ALL_COUNTRIES.filter((c) => {
+    const q = countrySearch.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      c.name.toLowerCase().includes(q) ||
+      c.code.toLowerCase().includes(q) ||
+      c.dialCode.includes(q)
+    );
+  });
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Strictly allow ONLY numeric digits (0-9)
+    const digitsOnly = e.target.value.replace(/\D/g, '');
+    setPhone(digitsOnly);
+  };
+
+  const handlePinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Strictly allow ONLY numeric digits (0-9)
+    const digitsOnly = e.target.value.replace(/\D/g, '');
+    setPin(digitsOnly);
+  };
+
   const handleSignupSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!phone) {
+      setError('Please enter a valid mobile number.');
+      return;
+    }
 
     if (!agreedTerms) {
       setError('Please agree to the Terms of Service to continue.');
       return;
     }
 
-    if (pin.length !== 4 || !/^\d{4}$/.exec(pin)) {
+    if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
       setError('Security PIN must be exactly 4 numeric digits.');
       return;
     }
 
-    const cleanPhone = phone.trim().replaceAll(' ', '');
+    const cleanDigits = phone.replace(/\D/g, '');
+    const fullPhone = `${selectedCountry.dialCode} ${cleanDigits}`;
     const cleanEmail = email.trim().toLowerCase();
 
-    // Check duplicate
+    // Check duplicate phone or email
     const exists = systemUsers.some(
       (u) =>
         u.email.toLowerCase() === cleanEmail ||
-        u.phone.replaceAll(' ', '') === cleanPhone
+        u.phone.replace(/\D/g, '') === cleanDigits ||
+        u.phone === fullPhone
     );
 
     if (exists) {
@@ -75,7 +111,7 @@ export const SignupView: React.FC<SignupViewProps> = ({
         id: `u_${Date.now()}`,
         name: name.trim(),
         email: cleanEmail,
-        phone: cleanPhone.startsWith('01') ? cleanPhone : `017${cleanPhone}`,
+        phone: fullPhone,
         accountNo: generatedAccountNo,
         pin: pin.trim(),
         password: password.trim(),
@@ -134,13 +170,19 @@ export const SignupView: React.FC<SignupViewProps> = ({
             <div className="space-y-1">
               <h3 className="text-xl font-black text-white">Registration Successful!</h3>
               <p className="text-xs text-slate-300">
-                Your digital wallet account has been successfully created. You can now log in and add funds.
+                Your digital wallet account has been successfully created and saved.
               </p>
             </div>
             <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 text-left space-y-1 text-xs">
               <div className="flex justify-between text-slate-400">
                 <span>Account Name:</span>
                 <span className="text-white font-bold">{name}</span>
+              </div>
+              <div className="flex justify-between text-slate-400">
+                <span>Country & Mobile:</span>
+                <span className="text-emerald-400 font-mono font-bold">
+                  {selectedCountry.flag} {selectedCountry.dialCode} {phone}
+                </span>
               </div>
               <div className="flex justify-between text-slate-400">
                 <span>Email:</span>
@@ -165,7 +207,7 @@ export const SignupView: React.FC<SignupViewProps> = ({
             <div className="text-center space-y-1">
               <h2 className="text-2xl font-black text-white tracking-tight">Create Account</h2>
               <p className="text-xs text-slate-400">
-                Join PayPulse & enjoy fast, secure, instant money transfers.
+                Select your Country & enter mobile number (digits only)
               </p>
             </div>
 
@@ -177,6 +219,31 @@ export const SignupView: React.FC<SignupViewProps> = ({
                   <span>{error}</span>
                 </div>
               )}
+
+              {/* Country Selection Field */}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-300 block flex items-center justify-between">
+                  <span>Country / Region</span>
+                  <span className="text-[10px] text-emerald-400 font-mono">
+                    {ALL_COUNTRIES.length} Countries Available
+                  </span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowCountryModal(true)}
+                  className="w-full bg-slate-900 border border-slate-800 hover:border-emerald-500/50 text-white rounded-2xl px-3.5 py-2.5 text-xs flex items-center justify-between transition group"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-base leading-none">{selectedCountry.flag}</span>
+                    <span className="font-bold text-white">{selectedCountry.name}</span>
+                    <span className="text-slate-400 font-mono">({selectedCountry.code})</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-emerald-400 font-mono font-bold bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20">
+                    <span>{selectedCountry.dialCode}</span>
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-400 transition" />
+                  </div>
+                </button>
+              </div>
 
               {/* Full Name */}
               <div className="space-y-1">
@@ -191,45 +258,55 @@ export const SignupView: React.FC<SignupViewProps> = ({
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. Tanvir Hossain"
-                    className="w-full bg-slate-900 border border-slate-800 focus:border-emerald-500 text-white rounded-2xl pl-10 pr-4 py-2.5 text-sm placeholder-slate-500 transition outline-none"
+                    className="w-full bg-slate-900 border border-slate-800 focus:border-emerald-500 text-white rounded-2xl pl-10 pr-4 py-2.5 text-xs placeholder-slate-500 transition outline-none"
                   />
                 </div>
               </div>
 
-              {/* Email & Phone Grid */}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300 block">Email</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                      <Mail className="w-3.5 h-3.5" />
-                    </div>
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="user@gmail.com"
-                      className="w-full bg-slate-900 border border-slate-800 focus:border-emerald-500 text-white rounded-2xl pl-8 pr-2 py-2.5 text-xs placeholder-slate-500 transition outline-none"
-                    />
+              {/* Email */}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-300 block">Email Address</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <Mail className="w-4 h-4" />
                   </div>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="user@gmail.com"
+                    className="w-full bg-slate-900 border border-slate-800 focus:border-emerald-500 text-white rounded-2xl pl-10 pr-4 py-2.5 text-xs placeholder-slate-500 transition outline-none"
+                  />
                 </div>
+              </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300 block">Mobile No</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                      <Phone className="w-3.5 h-3.5" />
-                    </div>
-                    <input
-                      type="text"
-                      required
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="01712000222"
-                      className="w-full bg-slate-900 border border-slate-800 focus:border-emerald-500 text-white rounded-2xl pl-8 pr-2 py-2.5 text-xs placeholder-slate-500 transition outline-none font-mono"
-                    />
-                  </div>
+              {/* Mobile Number (Digits Only + Dial Code) */}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-300 block flex items-center justify-between">
+                  <span>Mobile Number</span>
+                  <span className="text-[10px] text-emerald-400 font-mono">Digits Only (0-9)</span>
+                </label>
+                <div className="relative flex items-center">
+                  {/* Country Dial Code Badge */}
+                  <button
+                    type="button"
+                    onClick={() => setShowCountryModal(true)}
+                    className="absolute left-1.5 inset-y-1.5 px-2.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl flex items-center gap-1 font-mono text-xs font-bold border border-slate-700 transition"
+                  >
+                    <span>{selectedCountry.flag}</span>
+                    <span>{selectedCountry.dialCode}</span>
+                  </button>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    required
+                    value={phone}
+                    onChange={handlePhoneChange}
+                    placeholder="1712000222"
+                    className="w-full bg-slate-900 border border-slate-800 focus:border-emerald-500 text-white rounded-2xl pl-24 pr-4 py-2.5 text-xs placeholder-slate-500 transition outline-none font-mono font-bold tracking-wider"
+                  />
                 </div>
               </div>
 
@@ -253,19 +330,24 @@ export const SignupView: React.FC<SignupViewProps> = ({
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300 block">4-Digit PIN</label>
+                  <label className="text-xs font-semibold text-slate-300 block flex items-center justify-between">
+                    <span>4-Digit PIN</span>
+                    <span className="text-[10px] text-emerald-400 font-mono">0-9 Only</span>
+                  </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                       <KeyRound className="w-3.5 h-3.5" />
                     </div>
                     <input
                       type="password"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       maxLength={4}
                       required
                       value={pin}
-                      onChange={(e) => setPin(e.target.value)}
+                      onChange={handlePinChange}
                       placeholder="1234"
-                      className="w-full bg-slate-900 border border-slate-800 focus:border-emerald-500 text-white rounded-2xl pl-8 pr-2 py-2.5 text-xs placeholder-slate-500 transition outline-none font-mono text-center tracking-widest"
+                      className="w-full bg-slate-900 border border-slate-800 focus:border-emerald-500 text-white rounded-2xl pl-8 pr-2 py-2.5 text-xs placeholder-slate-500 transition outline-none font-mono text-center tracking-widest font-bold"
                     />
                   </div>
                 </div>
@@ -278,7 +360,7 @@ export const SignupView: React.FC<SignupViewProps> = ({
                   id="agreedTerms"
                   checked={agreedTerms}
                   onChange={(e) => setAgreedTerms(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500/20"
+                  className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500/20 cursor-pointer"
                 />
                 <label htmlFor="agreedTerms" className="text-[11px] text-slate-400 select-none cursor-pointer">
                   I agree to PayPulse <span className="text-emerald-400 underline">Terms of Service</span> & Privacy Policy.
@@ -321,6 +403,89 @@ export const SignupView: React.FC<SignupViewProps> = ({
           </>
         )}
       </div>
+
+      {/* ALL COUNTRIES SELECTOR MODAL */}
+      {showCountryModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-sm max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
+              <div className="flex items-center gap-2">
+                <Globe className="w-5 h-5 text-emerald-400" />
+                <h3 className="font-extrabold text-white text-sm">Select Country & Dial Code</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCountryModal(false)}
+                className="p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Search Input */}
+            <div className="p-3 border-b border-slate-800 bg-slate-900">
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
+                <input
+                  type="text"
+                  value={countrySearch}
+                  onChange={(e) => setCountrySearch(e.target.value)}
+                  placeholder="Search country, code, or dial code (+880, USA)..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            {/* Country List */}
+            <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+              {filteredCountries.map((c) => {
+                const isSelected = selectedCountry.code === c.code;
+                return (
+                  <button
+                    key={c.code}
+                    type="button"
+                    onClick={() => {
+                      setSelectedCountry(c);
+                      setShowCountryModal(false);
+                      setCountrySearch('');
+                    }}
+                    className={`w-full flex items-center justify-between p-3 rounded-2xl border transition text-left ${
+                      isSelected
+                        ? 'bg-emerald-500/15 border-emerald-500 text-white font-bold'
+                        : 'bg-slate-950/40 border-slate-800/80 text-slate-200 hover:bg-slate-800/60 hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl leading-none">{c.flag}</span>
+                      <div>
+                        <div className="text-xs font-bold flex items-center gap-1.5">
+                          <span>{c.name}</span>
+                          <span className="text-[10px] text-slate-400 font-mono">({c.code})</span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 font-mono">Currency: {c.symbol}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20">
+                        {c.dialCode}
+                      </span>
+                      {isSelected && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+                    </div>
+                  </button>
+                );
+              })}
+
+              {filteredCountries.length === 0 && (
+                <div className="text-center py-8 text-xs text-slate-500">
+                  No country found matching "{countrySearch}"
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Security Footer */}
       <div className="mt-auto pt-4 text-center text-[10px] text-slate-500 flex items-center justify-center gap-1.5 z-10">

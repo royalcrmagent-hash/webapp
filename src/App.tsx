@@ -514,6 +514,7 @@ export default function App() {
         {currentView === 'send' && (
           <SendMoneyView
             wallet={wallet}
+            systemUsers={systemUsers}
             onBack={() => {
               setSelectedRecipientForSend(null);
               setCurrentView('home');

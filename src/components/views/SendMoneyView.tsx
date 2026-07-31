@@ -16,11 +16,12 @@ import {
   Zap,
   Fingerprint,
 } from 'lucide-react';
-import { Contact, Transaction, WalletState } from '../../types';
+import { Contact, Transaction, WalletState, UserAccount } from '../../types';
 import { BiometricModal } from '../BiometricModal';
 
 interface SendMoneyViewProps {
   wallet: WalletState;
+  systemUsers?: UserAccount[];
   onBack: () => void;
   onSendSuccess: (txn: Transaction, newBalance: number) => void;
   initialRecipient?: { name: string; phone: string; avatar?: string } | null;
@@ -30,6 +31,7 @@ interface SendMoneyViewProps {
 
 export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
   wallet,
+  systemUsers = [],
   onBack,
   onSendSuccess,
   initialRecipient = null,
@@ -75,12 +77,125 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
     'Custom',
   ];
 
-  // Filter contacts
-  const filteredContacts = wallet.contacts.filter(
-    (c) =>
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.phone.includes(searchQuery)
-  );
+  const q = searchQuery.trim().toLowerCase();
+  const cleanQ = q.replace(/^@/, '');
+
+  // Filter contacts by Name, Phone, Username, or Email
+  const filteredContacts = wallet.contacts.filter((c) => {
+    if (!q) return true;
+    const matchName = c.name.toLowerCase().includes(cleanQ);
+    const matchPhone = c.phone.includes(cleanQ);
+    const matchUsername = c.username ? c.username.toLowerCase().includes(cleanQ) : false;
+    const matchEmail = c.email ? c.email.toLowerCase().includes(cleanQ) : false;
+    return matchName || matchPhone || matchUsername || matchEmail;
+  });
+
+  // Calculate live matched account preview
+  const getMatchedAccountPreview = () => {
+    if (!q) return null;
+
+    // 1. Direct match in contacts
+    const cMatch = wallet.contacts.find(
+      (c) =>
+        c.phone === q ||
+        c.phone.replace(/[^0-9]/g, '') === cleanQ.replace(/[^0-9]/g, '') ||
+        (c.username && c.username.toLowerCase() === cleanQ) ||
+        (c.email && c.email.toLowerCase() === q) ||
+        c.name.toLowerCase() === q
+    );
+    if (cMatch) {
+      return {
+        name: cMatch.name,
+        phone: cMatch.phone,
+        username: cMatch.username ? `@${cMatch.username}` : `@${cMatch.name.split(' ')[0].toLowerCase()}`,
+        email: cMatch.email || `${cMatch.username || cleanQ}@wallet.com`,
+        avatar: cMatch.avatar,
+        isVerified: true,
+        badge: 'Saved Contact',
+      };
+    }
+
+    // 2. Direct match in system registered users
+    const uMatch = systemUsers.find(
+      (u) =>
+        u.phone === q ||
+        u.phone.replace(/[^0-9]/g, '') === cleanQ.replace(/[^0-9]/g, '') ||
+        u.email.toLowerCase() === q ||
+        u.email.split('@')[0].toLowerCase() === cleanQ ||
+        u.name.toLowerCase() === q
+    );
+    if (uMatch) {
+      return {
+        name: uMatch.name,
+        phone: uMatch.phone,
+        username: `@${uMatch.email.split('@')[0]}`,
+        email: uMatch.email,
+        avatar: uMatch.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(uMatch.name)}&background=10b981&color=020617&font-size=0.45&bold=true`,
+        isVerified: true,
+        badge: 'Registered User',
+      };
+    }
+
+    // 3. First contact match from filtered list
+    if (filteredContacts.length > 0) {
+      const topC = filteredContacts[0];
+      return {
+        name: topC.name,
+        phone: topC.phone,
+        username: topC.username ? `@${topC.username}` : `@${topC.name.split(' ')[0].toLowerCase()}`,
+        email: topC.email || `${topC.username || cleanQ}@wallet.com`,
+        avatar: topC.avatar,
+        isVerified: true,
+        badge: 'Matched Contact',
+      };
+    }
+
+    // 4. Auto Name Extraction for typed Email, Username, or Phone Number
+    if (q.length >= 2) {
+      let detectedName = '';
+      if (q.includes('@') && q.includes('.')) {
+        // e.g. john.doe@gmail.com -> John Doe
+        const userPart = q.split('@')[0];
+        detectedName = userPart
+          .replace(/[._-]/g, ' ')
+          .split(' ')
+          .filter(Boolean)
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ');
+      } else if (searchQuery.trim().startsWith('@')) {
+        // e.g. @john_smith -> John Smith
+        detectedName = cleanQ
+          .replace(/[._-]/g, ' ')
+          .split(' ')
+          .filter(Boolean)
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ');
+      } else if (/^\d+$/.test(cleanQ)) {
+        detectedName = `Account (${q})`;
+      } else {
+        detectedName = searchQuery.trim()
+          .replace(/^@/, '')
+          .split(' ')
+          .filter(Boolean)
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ');
+      }
+
+      return {
+        name: detectedName,
+        phone: /^\d+$/.test(cleanQ) ? q : '01700000000',
+        username: `@${cleanQ}`,
+        email: q.includes('@') ? q : `${cleanQ}@wallet.com`,
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(detectedName)}&background=10b981&color=020617&font-size=0.45&bold=true`,
+        isVerified: false,
+        badge: 'Detected Name',
+      };
+    }
+
+    return null;
+  };
+
+  const matchedAccount = getMatchedAccountPreview();
 
   const handleSelectContact = (contact: Contact) => {
     setSelectedRecipient({
@@ -92,16 +207,19 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
   };
 
   const handleCustomPhoneProceed = () => {
-    if (!searchQuery || searchQuery.trim().length < 6) {
-      alert('Please enter a valid mobile number or account ID.');
+    if (!searchQuery || searchQuery.trim().length < 2) {
+      alert('Please enter a valid mobile number, username, or email.');
       return;
     }
-    // Check if matching contact exists
-    const match = wallet.contacts.find((c) => c.phone === searchQuery.trim());
-    setSelectedRecipient({
-      name: match ? match.name : `Account (${searchQuery.trim()})`,
+    const resolved = matchedAccount || {
+      name: searchQuery.trim(),
       phone: searchQuery.trim(),
-      avatar: match?.avatar,
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(searchQuery.trim())}&background=10b981&color=020617&font-size=0.45&bold=true`,
+    };
+    setSelectedRecipient({
+      name: resolved.name,
+      phone: resolved.phone,
+      avatar: resolved.avatar,
     });
     setStep('enter_amount');
   };
@@ -221,15 +339,16 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
       {/* STEP 1: SELECT RECIPIENT */}
       {step === 'select_recipient' && (
         <div className="flex-1 flex flex-col space-y-4">
-          <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
-            Select or Enter Recipient
+          <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+            <span>Select or Enter Recipient</span>
+            <span className="text-[10px] text-emerald-400 font-mono font-normal">Search Name, Phone, @Username, or Email</span>
           </label>
 
-          {/* Search or Phone Input */}
+          {/* Search or Input */}
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              if (searchQuery.length >= 6) {
+              if (searchQuery.trim().length >= 2) {
                 handleCustomPhoneProceed();
               }
             }}
@@ -240,13 +359,13 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search name or enter mobile number..."
+              placeholder="Enter name, phone, @username, or email..."
               className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-12 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
             />
-            {searchQuery.length >= 6 && (
+            {searchQuery.trim().length >= 2 && (
               <button
                 type="submit"
-                className="absolute right-2 top-2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1"
+                className="absolute right-2 top-2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm"
               >
                 <span>Next</span>
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -254,7 +373,70 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
             )}
           </form>
 
-          {/* Favorites / Quick Contacts */}
+          {/* LIVE MATCHED ACCOUNT CARD */}
+          {matchedAccount && (
+            <div className="bg-slate-900 border border-emerald-500/40 rounded-2xl p-3.5 space-y-3 shadow-lg bg-gradient-to-br from-emerald-950/40 via-slate-900 to-slate-900 animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span>ACCOUNT HOLDER MATCHED</span>
+                </div>
+                <span className="text-[10px] font-mono bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
+                  {matchedAccount.badge}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <div className="relative shrink-0">
+                    <img
+                      src={matchedAccount.avatar}
+                      alt={matchedAccount.name}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(matchedAccount.name)}&background=10b981&color=020617&font-size=0.45&bold=true`;
+                      }}
+                      className="w-12 h-12 rounded-full object-cover ring-2 ring-emerald-500/50 shadow-md"
+                    />
+                    <div className="absolute -bottom-0.5 -right-0.5 bg-emerald-500 rounded-full p-0.5 text-slate-950">
+                      <ShieldCheck className="w-3 h-3 text-slate-950" />
+                    </div>
+                  </div>
+
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-extrabold text-white flex items-center gap-1.5 truncate">
+                      <span>{matchedAccount.name}</span>
+                    </h3>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-0.5 text-[11px]">
+                      <span className="font-mono text-emerald-400 font-semibold">{matchedAccount.phone}</span>
+                      <span className="text-slate-600">•</span>
+                      <span className="font-mono text-slate-300">{matchedAccount.username}</span>
+                    </div>
+                    {matchedAccount.email && (
+                      <p className="text-[10px] text-slate-400 font-mono truncate mt-0.5">{matchedAccount.email}</p>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedRecipient({
+                      name: matchedAccount.name,
+                      phone: matchedAccount.phone,
+                      avatar: matchedAccount.avatar,
+                    });
+                    setStep('enter_amount');
+                  }}
+                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-md flex items-center gap-1 shrink-0 active:scale-95"
+                >
+                  <span>Select Name</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Favorites / Saved Contacts */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-slate-400">Saved Contacts</span>
@@ -263,46 +445,52 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
               </span>
             </div>
 
-            <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1 custom-scrollbar">
+            <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1 custom-scrollbar">
               {filteredContacts.map((contact) => (
                 <div
                   key={contact.id}
                   onClick={() => handleSelectContact(contact)}
-                  className="bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800/80 rounded-2xl p-3 flex items-center justify-between cursor-pointer transition transform active:scale-[0.99]"
+                  className="bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800/80 hover:border-slate-700 rounded-2xl p-3 flex items-center justify-between cursor-pointer transition transform active:scale-[0.99]"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 overflow-hidden">
                     {contact.avatar ? (
                       <img
                         src={contact.avatar}
                         alt={contact.name}
-                        className="w-11 h-11 rounded-full object-cover ring-2 ring-emerald-500/20"
+                        className="w-11 h-11 rounded-full object-cover ring-2 ring-emerald-500/20 shrink-0"
                       />
                     ) : (
-                      <div className="w-11 h-11 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 font-bold">
+                      <div className="w-11 h-11 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 font-bold shrink-0">
                         {contact.name.charAt(0)}
                       </div>
                     )}
-                    <div>
-                      <h4 className="text-sm font-semibold text-white flex items-center gap-1.5">
+                    <div className="min-w-0">
+                      <h4 className="text-sm font-bold text-white flex items-center gap-1.5 truncate">
                         {contact.name}
                         {contact.favorite && (
-                          <Sparkles className="w-3 h-3 text-amber-400 fill-amber-400" />
+                          <Sparkles className="w-3 h-3 text-amber-400 fill-amber-400 shrink-0" />
                         )}
                       </h4>
-                      <p className="text-xs font-mono text-slate-400">{contact.phone}</p>
+                      <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
+                        <span>{contact.phone}</span>
+                        {contact.username && <span className="text-emerald-400/80">@{contact.username}</span>}
+                      </div>
+                      {contact.email && (
+                        <p className="text-[10px] text-slate-500 font-mono truncate">{contact.email}</p>
+                      )}
                     </div>
                   </div>
-                  <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 group-hover:text-emerald-400">
+                  <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 group-hover:text-emerald-400 shrink-0">
                     <ChevronRight className="w-4 h-4" />
                   </div>
                 </div>
               ))}
 
-              {filteredContacts.length === 0 && (
+              {filteredContacts.length === 0 && !matchedAccount && (
                 <div className="text-center py-8 bg-slate-900/30 border border-dashed border-slate-800 rounded-2xl">
                   <User className="w-8 h-8 mx-auto text-slate-600 mb-2" />
                   <p className="text-xs text-slate-400">No contact found matching "{searchQuery}"</p>
-                  {searchQuery.length >= 6 && (
+                  {searchQuery.trim().length >= 2 && (
                     <button
                       onClick={handleCustomPhoneProceed}
                       className="mt-3 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-4 py-1.5 rounded-xl text-xs font-semibold hover:bg-emerald-500/30 transition"

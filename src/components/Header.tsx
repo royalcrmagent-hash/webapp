@@ -9,6 +9,7 @@ interface HeaderProps {
   onOpenProfile: () => void;
   onQuickSend: () => void;
   onBoostBalance: () => void;
+  isBoosting?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -18,6 +19,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenProfile,
   onQuickSend,
   onBoostBalance,
+  isBoosting,
 }) => {
   const unreadCount = wallet.notifications.filter((n) => !n.read).length;
 
@@ -105,9 +107,13 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center gap-2">
               <button
                 onClick={onBoostBalance}
-                className="bg-teal-500 text-white hover:bg-teal-400 px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center shadow-md active:scale-95"
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center shadow-md active:scale-95 ${
+                  isBoosting
+                    ? 'bg-amber-500 text-white animate-pulse'
+                    : 'bg-teal-500 text-white hover:bg-teal-400'
+                }`}
               >
-                Boost
+                {isBoosting ? 'Boosting...' : 'Boost'}
               </button>
               <button
                 onClick={onQuickSend}

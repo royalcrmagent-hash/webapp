@@ -4,6 +4,7 @@ import { PhoneFrame } from './components/PhoneFrame';
 import { Header } from './components/Header';
 import { QuickActions } from './components/QuickActions';
 import { BottomNav } from './components/BottomNav';
+import { BoostChartD3 } from './components/BoostChartD3';
 import { SendMoneyView } from './components/views/SendMoneyView';
 import { AddMoneyView } from './components/views/AddMoneyView';
 import { CashOutView } from './components/views/CashOutView';
@@ -77,6 +78,38 @@ export default function App() {
     return null;
   });
 
+  const [isBoosting, setIsBoosting] = useState<boolean>(false);
+  const [boostMultiplier, setBoostMultiplier] = useState<number>(1);
+  const [balanceHistory, setBalanceHistory] = useState<{ time: number; balance: number }[]>(() => [
+    { time: Date.now() - 3000, balance: 10000 },
+    { time: Date.now(), balance: 10000 },
+  ]);
+
+  // Continuous boost effect based on nanosecond rate (approx 0.00000000000026746% per ns * multiplier)
+  useEffect(() => {
+    if (!isBoosting) return;
+    const interval = setInterval(() => {
+      setWallet((prev) => {
+        // Rate per ns: 2.6746e-13 % * multiplier
+        const growthRatePerInterval = prev.balance * 0.00000013373 * boostMultiplier;
+        const addAmount = Math.max(0.1 * boostMultiplier, growthRatePerInterval);
+        const newBalance = prev.balance + addAmount;
+
+        setBalanceHistory((hist) => {
+          const updated = [...hist, { time: Date.now(), balance: newBalance }];
+          if (updated.length > 50) updated.shift();
+          return updated;
+        });
+
+        return {
+          ...prev,
+          balance: newBalance,
+        };
+      });
+    }, 50);
+    return () => clearInterval(interval);
+  }, [isBoosting, boostMultiplier]);
+
   // Biometric Security Policy Settings
   const [biometricThreshold, setBiometricThreshold] = useState<number>(1000);
   const [biometricRequired, setBiometricRequired] = useState<boolean>(true);
@@ -144,10 +177,7 @@ export default function App() {
   }, [currentUser]);
 
   const handleBoostBalance = () => {
-    setWallet((prev) => ({
-      ...prev,
-      balance: prev.balance + 100, // or some amount to increase
-    }));
+    setIsBoosting((prev) => !prev);
   };
 
   // Handlers
@@ -325,10 +355,20 @@ export default function App() {
               onOpenProfile={() => setCurrentView('profile')}
               onQuickSend={() => setCurrentView('send')}
               onBoostBalance={handleBoostBalance}
+              isBoosting={isBoosting}
             />
 
             {/* Core Services Grid */}
             <QuickActions onAction={handleQuickAction} />
+
+            {/* D3 Real-Time Balance Growth & Compounding Chart */}
+            <BoostChartD3
+              history={balanceHistory}
+              isBoosting={isBoosting}
+              boostMultiplier={boostMultiplier}
+              onMultiplierChange={setBoostMultiplier}
+              onToggleBoost={handleBoostBalance}
+            />
 
             {/* Quick Send Money Contact Avatars Banner */}
             <div className="px-4 py-1">

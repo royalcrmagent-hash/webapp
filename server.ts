@@ -98,40 +98,77 @@ const INITIAL_DB = {
   ],
 };
 
-async function initDB() {
-  const client = await pool.connect();
-  try {
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS app_state (
-        id INTEGER PRIMARY KEY,
-        data JSONB NOT NULL
-      );
-    `);
-    const res = await client.query('SELECT data FROM app_state WHERE id = 1');
-    if (res.rows.length === 0) {
-      await client.query('INSERT INTO app_state (id, data) VALUES ($1, $2)', [1, JSON.stringify(INITIAL_DB)]);
+// Database storage abstraction
+let db_storage: {
+  read: () => Promise<any>;
+  write: (data: any) => Promise<void>;
+};
+
+if (process.env.DATABASE_URL) {
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+  db_storage = {
+    read: async () => {
+      const res = await pool.query('SELECT data FROM app_state WHERE id = 1');
+      return res.rows[0]?.data || INITIAL_DB;
+    },
+    write: async (data: any) => {
+      await pool.query('UPDATE app_state SET data = $1 WHERE id = 1', [JSON.stringify(data)]);
     }
-  } finally {
-    client.release();
+  };
+
+  async function initDB() {
+    const client = await pool.connect();
+    try {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS app_state (
+          id INTEGER PRIMARY KEY,
+          data JSONB NOT NULL
+        );
+      `);
+      const res = await client.query('SELECT data FROM app_state WHERE id = 1');
+      if (res.rows.length === 0) {
+        await client.query('INSERT INTO app_state (id, data) VALUES ($1, $2)', [1, JSON.stringify(INITIAL_DB)]);
+      }
+    } finally {
+      client.release();
+    }
   }
+  initDB().catch(err => console.error('Database initialization error:', err));
+} else {
+  // Fallback to JSON file storage
+  db_storage = {
+    read: async () => {
+      try {
+        if (!fs.existsSync(DB_FILE)) {
+          await fs.promises.writeFile(DB_FILE, JSON.stringify(INITIAL_DB, null, 2));
+          return INITIAL_DB;
+        }
+        const data = await fs.promises.readFile(DB_FILE, 'utf-8');
+        return JSON.parse(data);
+      } catch (e) {
+        console.error('Read DB error:', e);
+        return INITIAL_DB;
+      }
+    },
+    write: async (data: any) => {
+      await fs.promises.writeFile(DB_FILE, JSON.stringify(data, null, 2));
+    }
+  };
 }
 
 async function readDB() {
-  const res = await pool.query('SELECT data FROM app_state WHERE id = 1');
-  return res.rows[0]?.data || INITIAL_DB;
+  return await db_storage.read();
 }
 
 async function writeDB(data: any) {
-  await pool.query('UPDATE app_state SET data = $1 WHERE id = 1', [JSON.stringify(data)]);
+  await db_storage.write(data);
 }
 
 async function startServer() {
   const app = express();
 
   app.use(express.json({ limit: '10mb' }));
-
-  // Initialize DB
-  await initDB();
 
   // API ROUTES (Always FIRST before Vite/static middlewares)
 

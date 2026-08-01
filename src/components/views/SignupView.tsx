@@ -67,7 +67,7 @@ export const SignupView: React.FC<SignupViewProps> = ({
     setPin(digitsOnly);
   };
 
-  const handleSignupSubmit = (e: React.FormEvent) => {
+  const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -105,7 +105,7 @@ export const SignupView: React.FC<SignupViewProps> = ({
 
     setIsLoading(true);
 
-    setTimeout(() => {
+    try {
       const generatedAccountNo = `10928374${Math.floor(100 + Math.random() * 900)}`;
       const newUser: UserAccount = {
         id: `u_${Date.now()}`,
@@ -122,10 +122,26 @@ export const SignupView: React.FC<SignupViewProps> = ({
         avatar: `https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200`,
       };
 
-      onRegisterUser(newUser);
+      const response = await fetch('/api/users/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUser),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        onRegisterUser(data.user || newUser);
+        setIsSuccess(true);
+      } else {
+        setError(data.error || 'Registration failed. Please try again.');
+      }
+    } catch (err) {
+      console.error(err);
+      setError('An error occurred while communicating with the registration server.');
+    } finally {
       setIsLoading(false);
-      setIsSuccess(true);
-    }, 600);
+    }
   };
 
   return (

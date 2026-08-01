@@ -11,6 +11,7 @@ import {
   Sparkles,
   AlertCircle,
   X,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface LoginViewProps {
@@ -86,16 +87,22 @@ export const LoginView: React.FC<LoginViewProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-white text-slate-900 p-6 relative overflow-y-auto">
+    <div className="flex-1 flex flex-col bg-slate-950 text-slate-100 p-5 relative overflow-y-auto">
+      {/* Background Ambient Glow */}
+      <div className="absolute top-0 left-0 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute bottom-10 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
       {/* Top Header */}
-      <div className="flex items-center justify-between mb-12">
+      <div className="flex items-center justify-between mb-4 z-10">
         <div className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-2xl bg-slate-950 flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-emerald-400" />
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 p-0.5 shadow-lg shadow-emerald-500/20">
+            <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-emerald-400" />
+            </div>
           </div>
           <div>
-            <h1 className="text-base font-bold text-slate-950 tracking-tight">PulseTracker</h1>
-            <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-widest">
+            <h1 className="text-base font-black text-white tracking-tight">PulseTracker</h1>
+            <span className="text-[10px] text-emerald-400 font-extrabold uppercase tracking-widest">
               Digital App
             </span>
           </div>
@@ -104,78 +111,83 @@ export const LoginView: React.FC<LoginViewProps> = ({
         {onClose && (
           <button
             onClick={onClose}
-            className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition"
+            className="p-2 rounded-full bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition"
           >
             <X className="w-5 h-5" />
           </button>
         )}
       </div>
 
-      {/* Main Form Container */}
-      <div className="my-auto max-w-sm mx-auto w-full space-y-8">
+      {/* Main Container */}
+      <div className="my-auto z-10 max-w-sm mx-auto w-full space-y-5">
         {/* Title */}
-        <div className="space-y-1">
-          <h2 className="text-3xl font-extrabold text-slate-950 tracking-tight">Welcome back.</h2>
-          <p className="text-sm text-slate-500">
-            Sign in to access your secure app.
+        <div className="text-center space-y-1">
+          <h2 className="text-2xl font-black text-white tracking-tight">Welcome back</h2>
+          <p className="text-xs text-slate-400">
+            Sign in to access your secure app account
           </p>
         </div>
 
         {/* Login Form */}
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Identifier Input */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-900 uppercase tracking-wider block">
+              <label className="text-xs font-semibold text-slate-300 block">
                 Username / Email / Mobile / Acc#
               </label>
-              <span className="text-[10px] text-slate-500 font-medium">Optional if passkey used</span>
             </div>
             <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <Mail className="w-4 h-4" />
+              </div>
               <input
                 type="text"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                placeholder="Username, Email, Number, or Profile ID"
-                className="w-full bg-slate-50 border border-slate-200 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 text-slate-950 rounded-2xl px-5 py-4 text-sm placeholder-slate-400 transition outline-none"
+                placeholder="Email, number, or profile ID"
+                className="w-full bg-slate-900 border border-slate-800 focus:border-emerald-500 text-white rounded-2xl pl-10 pr-4 py-3 text-sm placeholder-slate-500 transition outline-none"
               />
             </div>
           </div>
 
           {/* Passkey Input */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+              <label className="text-xs font-semibold text-slate-300 block">
                 Passkey
               </label>
               <button
                 type="button"
                 onClick={onGoToForgotPasskey}
-                className="text-xs text-slate-500 hover:text-slate-900 font-semibold transition"
+                className="text-[11px] text-emerald-400 hover:text-emerald-300 font-bold transition"
               >
                 Forgot?
               </button>
             </div>
             <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <Lock className="w-4 h-4" />
+              </div>
               <input
                 type={showPasskey ? 'text' : 'passkey'}
                 value={passkey}
                 onChange={(e) => setPasskey(e.target.value)}
                 placeholder="Enter account passkey"
-                className="w-full bg-slate-50 border border-slate-200 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 text-slate-950 rounded-2xl px-5 py-4 text-sm placeholder-slate-400 transition outline-none font-mono"
+                className="w-full bg-slate-900 border border-slate-800 focus:border-emerald-500 text-white rounded-2xl pl-10 pr-12 py-3 text-sm placeholder-slate-500 transition outline-none font-mono"
               />
               <button
                 type="button"
                 onClick={() => setShowPasskey(!showPasskey)}
-                className="absolute inset-y-0 right-0 pr-5 flex items-center text-slate-400 hover:text-slate-900"
+                className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-500 hover:text-emerald-400"
               >
                 {showPasskey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </div>
 
-          <div className="bg-slate-100 p-3 rounded-2xl border border-slate-200/80 text-[11px] text-slate-600 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+          <div className="bg-slate-900/50 p-3 rounded-2xl border border-slate-800/80 text-[11px] text-slate-400 flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>Login using your registered account <strong>Passkey</strong>.</span>
           </div>
 
@@ -183,34 +195,41 @@ export const LoginView: React.FC<LoginViewProps> = ({
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-slate-950 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition active:scale-[0.98] flex items-center justify-center gap-2 text-sm"
+            className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black py-3.5 rounded-2xl shadow-lg shadow-emerald-500/25 transition active:scale-[0.98] flex items-center justify-center gap-2 text-sm mt-2"
           >
             {isLoading ? (
               <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-scode"></span>
+                <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-scode"></span>
                 <span>Signing In...</span>
               </span>
             ) : (
               <>
-                <span>Sign In</span>
+                <span>Sign In / Login</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
           </button>
         </form>
-        {/* Signup Link */}
-        <div className="text-center">
-          <p className="text-sm text-slate-500">
+
+        {/* Footer Navigation */}
+        <div className="pt-3 text-center border-t border-slate-800/80">
+          <p className="text-xs text-slate-400">
             Need an account?{' '}
             <button
               type="button"
               onClick={onGoToSignup}
-              className="text-slate-950 hover:text-slate-700 font-bold underline underline-offset-4 transition"
+              className="text-emerald-400 hover:text-emerald-300 font-extrabold underline underline-offset-4 transition"
             >
               Create Account
             </button>
           </p>
         </div>
+      </div>
+
+      {/* Security Footer */}
+      <div className="mt-auto pt-4 text-center text-[10px] text-slate-500 flex items-center justify-center gap-1.5 z-10">
+        <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+        <span>Instant KYC Verification & Encrypted Storage</span>
       </div>
 
       <PopupDialog

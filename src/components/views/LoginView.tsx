@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { UserAccount } from '../../types';
 import { PopupDialog, DialogType } from '../ui/PopupDialog';
+import ReCAPTCHA from 'react-google-recaptcha';
 import {
   Lock,
   Mail,
@@ -33,6 +34,23 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [passkey, setPasskey] = useState('');
   const [showPasskey, setShowPasskey] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const [dbStatus, setDbStatus] = useState<{ connected: boolean; type: string } | null>(null);
+  const recaptchaRef = useRef<ReCAPTCHA>(null);
+  
+  // Fetch DB Status on mount
+  React.useEffect(() => {
+    fetch('/api/health')
+      .then(res => res.json())
+      .then(data => {
+        if (data.database === 'connected') {
+          setDbStatus({ connected: true, type: data.storageType });
+        } else {
+          setDbStatus({ connected: false, type: 'Disconnected' });
+        }
+      })
+      .catch(() => setDbStatus({ connected: false, type: 'Error' }));
+  }, []);
   
   // Custom Popup Dialog State
   const [dialogState, setDialogState] = useState<{
@@ -56,20 +74,30 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const target = identifier.trim();
+    if (!target) {
+      openPopup('Input Required', 'Please enter your Username, Email, Phone, or Profile ID.', 'warning');
+      return;
+    }
+
+    const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || import.meta.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+    if (siteKey && !recaptchaToken) {
+      openPopup('Verification Required', 'Please complete the reCAPTCHA verification.', 'warning');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const target = identifier.trim() || passkey.trim();
-      if (!target) {
-        openPopup('Input Required', 'Please enter your Username, Email, Phone, Profile ID, or Passkey.', 'warning');
-        setIsLoading(false);
-        return;
-      }
-      
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ emailOrPhone: target, passkey: passkey })
+        body: JSON.stringify({ 
+          emailOrPhone: target, 
+          passkey: passkey,
+          recaptchaToken
+        })
       });
       const data = await response.json();
       
@@ -77,6 +105,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
         onLoginSuccess(data.user);
       } else {
         openPopup('Login Failed', data.error || 'Invalid credentials.');
+        recaptchaRef.current?.reset();
+        setRecaptchaToken(null);
       }
     } catch (err) {
       console.error(err);
@@ -85,6 +115,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
       setIsLoading(false);
     }
   };
+
+  const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || import.meta.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
 
   return (
     <div className="flex-1 flex flex-col bg-slate-950 text-slate-100 p-5 relative overflow-y-auto">
@@ -120,6 +152,25 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
       {/* Main Container */}
       <div className="my-auto z-10 max-w-sm mx-auto w-full space-y-5">
+        {/* Database Status Indicator */}
+        <div className="flex justify-center mb-2">
+          {dbStatus ? (
+            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold border transition-all ${
+              dbStatus.connected 
+                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                : 'bg-red-500/10 border-red-500/20 text-red-400'
+            }`}>
+              <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${dbStatus.connected ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+              <span>DB: {dbStatus.type}</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold border bg-slate-900/50 border-slate-800 text-slate-500">
+              <div className="w-1.5 h-1.5 rounded-full bg-slate-700"></div>
+              <span>Checking Database...</span>
+            </div>
+          )}
+        </div>
+
         {/* Title */}
         <div className="text-center space-y-1">
           <h2 className="text-2xl font-black text-white tracking-tight">Welcome back</h2>
@@ -190,6 +241,17 @@ export const LoginView: React.FC<LoginViewProps> = ({
             <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>Login using your registered account <strong>Passkey</strong>.</span>
           </div>
+
+          {siteKey && (
+            <div className="flex justify-center py-2">
+              <ReCAPTCHA
+                ref={recaptchaRef}
+                sitekey={siteKey}
+                onChange={(token) => setRecaptchaToken(token)}
+                theme="dark"
+              />
+            </div>
+          )}
 
           {/* Submit Button */}
           <button

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { UserAccount } from '../../types';
 import { ALL_COUNTRIES, CountryCurrency } from '../../data/countries';
+import ReCAPTCHA from 'react-google-recaptcha';
 import {
   User,
   Mail,
@@ -43,6 +44,8 @@ export const SignupView: React.FC<SignupViewProps> = ({
   const [error, setError] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const recaptchaRef = useRef<ReCAPTCHA>(null);
 
   // Filter countries for modal search
   const filteredCountries = ALL_COUNTRIES.filter((c) => {
@@ -103,6 +106,12 @@ export const SignupView: React.FC<SignupViewProps> = ({
       return;
     }
 
+    const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || import.meta.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+    if (siteKey && !recaptchaToken) {
+      setError('Please complete the reCAPTCHA verification.');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -125,7 +134,10 @@ export const SignupView: React.FC<SignupViewProps> = ({
       const response = await fetch('/api/users/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newUser),
+        body: JSON.stringify({
+          ...newUser,
+          recaptchaToken
+        }),
       });
 
       const data = await response.json();
@@ -135,6 +147,8 @@ export const SignupView: React.FC<SignupViewProps> = ({
         setIsSuccess(true);
       } else {
         setError(data.error || 'Registration failed. Please try again.');
+        recaptchaRef.current?.reset();
+        setRecaptchaToken(null);
       }
     } catch (err) {
       console.error(err);
@@ -143,6 +157,8 @@ export const SignupView: React.FC<SignupViewProps> = ({
       setIsLoading(false);
     }
   };
+
+  const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || import.meta.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
 
   return (
     <div className="flex-1 flex flex-col bg-slate-950 text-slate-100 p-5 relative overflow-y-auto">
@@ -382,6 +398,17 @@ export const SignupView: React.FC<SignupViewProps> = ({
                   I agree to PulseTracker <span className="text-emerald-400 underline">Terms of Service</span> & Privacy Policy.
                 </label>
               </div>
+
+              {siteKey && (
+                <div className="flex justify-center py-1">
+                  <ReCAPTCHA
+                    ref={recaptchaRef}
+                    sitekey={siteKey}
+                    onChange={(token) => setRecaptchaToken(token)}
+                    theme="dark"
+                  />
+                </div>
+              )}
 
               {/* Submit Button */}
               <button

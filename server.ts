@@ -5,8 +5,25 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import pg from 'pg';
+import axios from 'axios';
+import { sendEmail } from './server/mail.ts';
+
 const { Pool } = pg;
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+const verifyRecaptcha = async (token: string) => {
+  const secret = process.env.RECAPTCHA_SECRET_KEY;
+  if (!secret) return true; // Skip if no secret key provided
+  try {
+    const response = await axios.post(
+      `https://www.google.com/recaptcha/api/siteverify?secret=${secret}&response=${token}`
+    );
+    return response.data.success;
+  } catch (error) {
+    console.error('reCAPTCHA verification error:', error);
+    return false;
+  }
+};
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -173,8 +190,23 @@ async function startServer() {
   // API ROUTES (Always FIRST before Vite/static middlewares)
 
   // Healthcheck
-  app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', storage: 'Vercel Server DB Active' });
+  app.get('/api/health', async (req, res) => {
+    try {
+      await readDB();
+      const storageType = process.env.DATABASE_URL ? 'Cloud (PostgreSQL)' : 'Local (JSON Storage)';
+      res.json({ 
+        status: 'ok', 
+        database: 'connected', 
+        storageType,
+        timestamp: new Date().toISOString()
+      });
+    } catch (err) {
+      res.status(500).json({ 
+        status: 'error', 
+        database: 'disconnected', 
+        error: err instanceof Error ? err.message : String(err) 
+      });
+    }
   });
 
   // Get full database state
@@ -203,7 +235,19 @@ async function startServer() {
 
   // User Registration
   app.post('/api/users/register', async (req, res) => {
-    const newUser = req.body;
+    const { recaptchaToken, ...newUser } = req.body;
+    
+    if (process.env.RECAPTCHA_SECRET_KEY && !recaptchaToken) {
+      return res.status(400).json({ success: false, error: 'reCAPTCHA verification required' });
+    }
+
+    if (recaptchaToken) {
+      const isValid = await verifyRecaptcha(recaptchaToken);
+      if (!isValid) {
+        return res.status(400).json({ success: false, error: 'reCAPTCHA verification failed' });
+      }
+    }
+
     if (!newUser || !newUser.email || !newUser.phone) {
       return res.status(400).json({ success: false, error: 'Email and Phone are required' });
     }
@@ -236,12 +280,34 @@ async function startServer() {
     db.systemUsers.push(userWithDefaults);
     await writeDB(db);
 
+    // Send Welcome Email
+    if (userWithDefaults.email) {
+      sendEmail(
+        userWithDefaults.email,
+        'Welcome to PulseTracker!',
+        `Hello ${userWithDefaults.name},\n\nWelcome to PulseTracker! Your account has been successfully created. Your Profile ID is ${userWithDefaults.profileId}.\n\nThank you for joining us!`,
+        `<h1>Welcome to PulseTracker!</h1><p>Hello <strong>${userWithDefaults.name}</strong>,</p><p>Your account has been successfully created. Your Profile ID is <strong>${userWithDefaults.profileId}</strong>.</p><p>Thank you for joining us!</p>`
+      ).catch(err => console.error('Failed to send welcome email:', err));
+    }
+
     res.json({ success: true, user: userWithDefaults, message: 'User registered successfully on Vercel storage' });
   });
 
   // User Login
   app.post('/api/auth/login', async (req, res) => {
-    const { emailOrPhone, passkey, code } = req.body;
+    const { emailOrPhone, passkey, code, recaptchaToken } = req.body;
+    
+    if (process.env.RECAPTCHA_SECRET_KEY && !recaptchaToken) {
+      return res.status(400).json({ success: false, error: 'reCAPTCHA verification required' });
+    }
+
+    if (recaptchaToken) {
+      const isValid = await verifyRecaptcha(recaptchaToken);
+      if (!isValid) {
+        return res.status(400).json({ success: false, error: 'reCAPTCHA verification failed' });
+      }
+    }
+
     if (!emailOrPhone) {
       return res.status(400).json({ success: false, error: 'Email or phone required' });
     }
@@ -271,6 +337,16 @@ async function startServer() {
 
     if (code && user.code && user.code !== code) {
       return res.status(401).json({ success: false, error: 'Incorrect Security Code.' });
+    }
+
+    // Send Login Notification Email
+    if (user.email) {
+      sendEmail(
+        user.email,
+        'New Login Detected',
+        `Hello ${user.name},\n\nA new login was detected on your PulseTracker account at ${new Date().toLocaleString()}.\n\nIf this wasn't you, please reset your passkey immediately.`,
+        `<h1>New Login Detected</h1><p>Hello <strong>${user.name}</strong>,</p><p>A new login was detected on your PulseTracker account at <strong>${new Date().toLocaleString()}</strong>.</p><p>If this wasn't you, please reset your passkey immediately.</p>`
+      ).catch(err => console.error('Failed to send login email:', err));
     }
 
     res.json({ success: true, user });

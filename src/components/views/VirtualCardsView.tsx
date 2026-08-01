@@ -170,6 +170,7 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
 
     const newCard: VirtualCard = {
       id: `vc_${Date.now()}`,
+      userId: app.user.profileId,
       type: issueCardType,
       cardName: issueCardName.trim() || defaultLabel,
       cardNumber: formattedNum,

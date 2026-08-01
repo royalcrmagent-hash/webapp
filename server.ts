@@ -41,6 +41,7 @@ const INITIAL_DB = {
       email: 'rahim@gmail.com',
       avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150',
       favorite: true,
+      userId: 'ADM-0000-999',
     },
     {
       id: 'c2',
@@ -50,6 +51,7 @@ const INITIAL_DB = {
       email: 'nusrat@gmail.com',
       avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150',
       favorite: true,
+      userId: 'ADM-0000-999',
     },
     {
       id: 'c3',
@@ -59,6 +61,7 @@ const INITIAL_DB = {
       email: 'tanvir@gmail.com',
       avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150',
       favorite: true,
+      userId: 'ADM-0000-999',
     },
     {
       id: 'c4',
@@ -68,6 +71,7 @@ const INITIAL_DB = {
       email: 'sadia@gmail.com',
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150',
       favorite: true,
+      userId: 'ADM-0000-999',
     },
     {
       id: 'c5',
@@ -77,6 +81,7 @@ const INITIAL_DB = {
       email: 'karim@gmail.com',
       avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150',
       favorite: true,
+      userId: 'ADM-0000-999',
     },
   ],
   transactions: [],
@@ -88,6 +93,7 @@ const INITIAL_DB = {
       time: 'Just now',
       read: false,
       type: 'system',
+      userId: 'ADM-0000-999',
     },
   ],
 };
@@ -142,16 +148,18 @@ async function startServer() {
 
   // Sync / Save full database state
   app.post('/api/db/sync', async (req, res) => {
-    const { systemUsers, contacts, transactions, notifications } = req.body;
+    const { systemUsers, contacts, transactions, notifications, virtualCards, biometricThreshold, biometricRequired } = req.body;
     const currentDB = await readDB();
-
     const updatedDB = {
+      ...currentDB,
       systemUsers: systemUsers || currentDB.systemUsers,
       contacts: contacts || currentDB.contacts,
       transactions: transactions || currentDB.transactions,
       notifications: notifications || currentDB.notifications,
+      virtualCards: virtualCards || currentDB.virtualCards,
+      biometricThreshold: biometricThreshold !== undefined ? biometricThreshold : currentDB.biometricThreshold,
+      biometricRequired: biometricRequired !== undefined ? biometricRequired : currentDB.biometricRequired
     };
-
     await writeDB(updatedDB);
     res.json({ success: true, message: 'Server database synchronized', db: updatedDB });
   });

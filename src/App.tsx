@@ -22,7 +22,7 @@ import { VirtualCardsView } from './components/views/VirtualCardsView';
 import { PopupDialog, DialogType } from './components/ui/PopupDialog';
 import { INITIAL_WALLET_STATE, INITIAL_SYSTEM_USERS, INITIAL_VIRTUAL_CARDS } from './data/initialData';
 import { getCountryBySymbolOrCode } from './data/countries';
-import { AppState, Transaction, Contact, Currency, UserAccount, VirtualCard, VirtualCardType } from './types';
+import { AppState, Transaction, Contact, Currency, UserAccount, VirtualCard, VirtualCardType, AppNotification } from './types';
 import {
   Send,
   Sparkles,
@@ -142,6 +142,10 @@ export default function App() {
   const handleLogout = () => {
     setCurrentUser(null);
     localStorage.removeItem(LOCAL_STORAGE_CURRENT_USER_KEY);
+    localStorage.removeItem(LOCAL_STORAGE_KEY);
+    localStorage.removeItem(LOCAL_STORAGE_VIRTUAL_CARDS_KEY);
+    setApp(INITIAL_WALLET_STATE);
+    setVirtualCards(INITIAL_VIRTUAL_CARDS);
     try {
       sessionStorage.clear();
     } catch (e) {
@@ -323,6 +327,15 @@ export default function App() {
             if (Array.isArray(data.db.notifications)) {
               setApp((prev) => ({ ...prev, notifications: data.db.notifications }));
             }
+            if (Array.isArray(data.db.virtualCards)) {
+              setVirtualCards(data.db.virtualCards);
+            }
+            if (data.db.biometricThreshold !== undefined) {
+              setBiometricThreshold(data.db.biometricThreshold);
+            }
+            if (data.db.biometricRequired !== undefined) {
+              setBiometricRequired(data.db.biometricRequired);
+            }
           }
         }
       } catch (err) {
@@ -362,6 +375,9 @@ export default function App() {
             contacts: app.contacts,
             transactions: app.transactions,
             notifications: app.notifications,
+            virtualCards,
+            biometricThreshold,
+            biometricRequired
           }),
         });
       } catch (e) {
@@ -369,7 +385,7 @@ export default function App() {
       }
     };
     syncWithServer();
-  }, [systemUsers, app.contacts, app.transactions, app.notifications]);
+  }, [systemUsers, app, virtualCards, biometricThreshold, biometricRequired]);
 
   // Save current user on updates
   useEffect(() => {
@@ -597,9 +613,10 @@ export default function App() {
     }
   };
 
-  const myTransactions = app.transactions.filter(t => t.userId === app.user.profileId );
-  const myNotifications = app.notifications.filter(n => n.userId === app.user.profileId );
-  const myContacts = app.contacts.filter(c => c.userId === app.user.profileId );
+  const myTransactions = app.transactions.filter(t => t.userId === app.user.profileId);
+  const myNotifications = app.notifications.filter(n => n.userId === app.user.profileId);
+  const myContacts = app.contacts.filter(c => c.userId === app.user.profileId);
+  const myVirtualCards = virtualCards.filter(v => v.userId === app.user.profileId || !v.userId);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between max-w-2xl mx-auto shadow-2xl relative">
@@ -794,7 +811,7 @@ export default function App() {
         {currentView === 'virtual_cards' && (
           <VirtualCardsView
             app={app}
-            cards={virtualCards}
+            cards={myVirtualCards}
             initialSelectedType={selectedCardTypeFilter}
             onBack={() => setCurrentView('home')}
             onIssueCard={handleIssueVirtualCard}

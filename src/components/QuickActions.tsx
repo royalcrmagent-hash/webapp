@@ -100,7 +100,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ onAction, isBoosting
     },
     {
       key: 'bank_transfer',
-      label: 'Bank Transfer',
+      label: 'External Transfer',
       icon: Building2,
       category: 'finance',
       gradient: 'from-blue-600 to-indigo-700',

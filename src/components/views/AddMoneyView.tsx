@@ -16,7 +16,7 @@ export const AddMoneyView: React.FC<AddMoneyViewProps> = ({
   onAddMoneySuccess,
 }) => {
   const [method, setMethod] = useState<'card' | 'bank'>('card');
-  const [sourceName, setSourceName] = useState('BRAC Bank Visa (*4092)');
+  const [sourceName, setSourceName] = useState('BRAC External Visa (*4092)');
   const [amount, setAmount] = useState('2000');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -42,10 +42,10 @@ export const AddMoneyView: React.FC<AddMoneyViewProps> = ({
   };
 
   const bankOptions = [
-    'BRAC Bank Visa (*4092)',
-    'City Bank Mastercard (*8812)',
-    'Islami Bank Account (*9921)',
-    'Dutch-Bangla Bank (*1102)',
+    'BRAC External Visa (*4092)',
+    'City External Mastercard (*8812)',
+    'Islami External Account (*9921)',
+    'Dutch-Bangla External (*1102)',
   ];
 
   const [category, setCategory] = useState<string>('Deposit');
@@ -67,7 +67,7 @@ export const AddMoneyView: React.FC<AddMoneyViewProps> = ({
       const txn: Transaction = {
         id: `TXN${Math.floor(100000 + Math.random() * 900000)}`,
         type: 'cash_in',
-        title: `Add Money (${method === 'card' ? 'Card' : 'Bank'})`,
+        title: `Add Money (${method === 'card' ? 'Card' : 'External'})`,
         recipientName: sourceName,
         recipientPhone: 'Deposit to Wallet',
         amount: numAmount,
@@ -123,7 +123,7 @@ export const AddMoneyView: React.FC<AddMoneyViewProps> = ({
               }`}
             >
               <Building2 className="w-4 h-4" />
-              <span>Bank Transfer</span>
+              <span>External Transfer</span>
             </button>
           </div>
 

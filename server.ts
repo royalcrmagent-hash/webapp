@@ -1,8 +1,12 @@
+import "dotenv/config";
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
+import pg from 'pg';
+const { Pool } = pg;
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -88,28 +92,31 @@ const INITIAL_DB = {
   ],
 };
 
-// Helper: Read DB from JSON storage
-function readDB() {
+async function initDB() {
+  const client = await pool.connect();
   try {
-    if (fs.existsSync(DB_FILE)) {
-      const raw = fs.readFileSync(DB_FILE, 'utf-8');
-      return JSON.parse(raw);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS app_state (
+        id INTEGER PRIMARY KEY,
+        data JSONB NOT NULL
+      );
+    `);
+    const res = await client.query('SELECT data FROM app_state WHERE id = 1');
+    if (res.rows.length === 0) {
+      await client.query('INSERT INTO app_state (id, data) VALUES ($1, $2)', [1, JSON.stringify(INITIAL_DB)]);
     }
-  } catch (err) {
-    console.error('Error reading server DB file:', err);
+  } finally {
+    client.release();
   }
-  // Write default if not exists
-  writeDB(INITIAL_DB);
-  return INITIAL_DB;
 }
 
-// Helper: Write DB to JSON storage
-function writeDB(data: any) {
-  try {
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
-  } catch (err) {
-    console.error('Error writing server DB file:', err);
-  }
+async function readDB() {
+  const res = await pool.query('SELECT data FROM app_state WHERE id = 1');
+  return res.rows[0]?.data || INITIAL_DB;
+}
+
+async function writeDB(data: any) {
+  await pool.query('UPDATE app_state SET data = $1 WHERE id = 1', [JSON.stringify(data)]);
 }
 
 async function startServer() {
@@ -118,7 +125,7 @@ async function startServer() {
   app.use(express.json({ limit: '10mb' }));
 
   // Initialize DB
-  readDB();
+  await initDB();
 
   // API ROUTES (Always FIRST before Vite/static middlewares)
 
@@ -128,15 +135,15 @@ async function startServer() {
   });
 
   // Get full database state
-  app.get('/api/db', (req, res) => {
-    const db = readDB();
+  app.get('/api/db', async (req, res) => {
+    const db = await readDB();
     res.json({ success: true, db });
   });
 
   // Sync / Save full database state
-  app.post('/api/db/sync', (req, res) => {
+  app.post('/api/db/sync', async (req, res) => {
     const { systemUsers, contacts, transactions, notifications } = req.body;
-    const currentDB = readDB();
+    const currentDB = await readDB();
 
     const updatedDB = {
       systemUsers: systemUsers || currentDB.systemUsers,
@@ -145,18 +152,18 @@ async function startServer() {
       notifications: notifications || currentDB.notifications,
     };
 
-    writeDB(updatedDB);
+    await writeDB(updatedDB);
     res.json({ success: true, message: 'Server database synchronized', db: updatedDB });
   });
 
   // User Registration
-  app.post('/api/users/register', (req, res) => {
+  app.post('/api/users/register', async (req, res) => {
     const newUser = req.body;
     if (!newUser || !newUser.email || !newUser.phone) {
       return res.status(400).json({ success: false, error: 'Email and Phone are required' });
     }
 
-    const db = readDB();
+    const db = await readDB();
     const cleanPhoneDigits = newUser.phone.replace(/\D/g, '');
     const cleanEmail = newUser.email.trim().toLowerCase();
 
@@ -182,19 +189,19 @@ async function startServer() {
     };
 
     db.systemUsers.push(userWithDefaults);
-    writeDB(db);
+    await writeDB(db);
 
     res.json({ success: true, user: userWithDefaults, message: 'User registered successfully on Vercel storage' });
   });
 
   // User Login
-  app.post('/api/auth/login', (req, res) => {
+  app.post('/api/auth/login', async (req, res) => {
     const { emailOrPhone, password, pin } = req.body;
     if (!emailOrPhone) {
       return res.status(400).json({ success: false, error: 'Email or phone required' });
     }
 
-    const db = readDB();
+    const db = await readDB();
     const target = emailOrPhone.trim().toLowerCase().replaceAll(' ', '');
     const cleanDigits = target.replace(/\D/g, '');
 
@@ -225,9 +232,9 @@ async function startServer() {
   });
 
   // Update Credentials (PIN / Password reset)
-  app.post('/api/auth/update-credentials', (req, res) => {
+  app.post('/api/auth/update-credentials', async (req, res) => {
     const { emailOrPhone, newPass, newPin } = req.body;
-    const db = readDB();
+    const db = await readDB();
     const target = (emailOrPhone || '').trim().toLowerCase().replaceAll(' ', '');
     const cleanDigits = target.replace(/\D/g, '');
 
@@ -251,14 +258,14 @@ async function startServer() {
       return res.status(404).json({ success: false, error: 'User account not found.' });
     }
 
-    writeDB(db);
+    await writeDB(db);
     res.json({ success: true, message: 'Credentials updated successfully on Vercel storage' });
   });
 
   // Add / Sync Transaction
-  app.post('/api/transactions/add', (req, res) => {
+  app.post('/api/transactions/add', async (req, res) => {
     const { transaction, userEmailOrPhone, newBalance } = req.body;
-    const db = readDB();
+    const db = await readDB();
 
     if (transaction) {
       db.transactions.unshift(transaction);
@@ -278,14 +285,14 @@ async function startServer() {
       });
     }
 
-    writeDB(db);
+    await writeDB(db);
     res.json({ success: true, db });
   });
 
   // Admin Freeze/Unfreeze
-  app.post('/api/admin/users/freeze', (req, res) => {
+  app.post('/api/admin/users/freeze', async (req, res) => {
     const { userId, isFrozen } = req.body;
-    const db = readDB();
+    const db = await readDB();
 
     db.systemUsers = db.systemUsers.map((u: any) => {
       if (u.id === userId) {
@@ -294,14 +301,14 @@ async function startServer() {
       return u;
     });
 
-    writeDB(db);
+    await writeDB(db);
     res.json({ success: true, db });
   });
 
   // Admin Adjust Balance
-  app.post('/api/admin/users/balance', (req, res) => {
+  app.post('/api/admin/users/balance', async (req, res) => {
     const { userId, newBalance } = req.body;
-    const db = readDB();
+    const db = await readDB();
 
     db.systemUsers = db.systemUsers.map((u: any) => {
       if (u.id === userId) {
@@ -310,18 +317,18 @@ async function startServer() {
       return u;
     });
 
-    writeDB(db);
+    await writeDB(db);
     res.json({ success: true, db });
   });
 
   // Admin Delete User
-  app.post('/api/admin/users/delete', (req, res) => {
+  app.post('/api/admin/users/delete', async (req, res) => {
     const { userId } = req.body;
-    const db = readDB();
+    const db = await readDB();
 
     db.systemUsers = db.systemUsers.filter((u: any) => u.id !== userId);
 
-    writeDB(db);
+    await writeDB(db);
     res.json({ success: true, db });
   });
 

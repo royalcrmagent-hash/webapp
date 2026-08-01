@@ -548,43 +548,7 @@ export default function App() {
   };
 
   const handleUpdateCurrency = (newSymbolOrCode: Currency) => {
-    setWallet((prev) => {
-      const oldCountry = getCountryBySymbolOrCode(prev.currency);
-      const newCountry = getCountryBySymbolOrCode(newSymbolOrCode);
-      
-      const conversionRate = newCountry.rateToUSD / oldCountry.rateToUSD;
-
-      return {
-        ...prev,
-        balance: prev.balance * conversionRate,
-        currency: newSymbolOrCode,
-        transactions: prev.transactions.map(txn => ({
-          ...txn,
-          amount: txn.amount * conversionRate,
-          fee: txn.fee * conversionRate
-        }))
-      };
-    });
-
-    setVirtualCards((prev) => {
-      const oldCountry = getCountryBySymbolOrCode(wallet.currency);
-      const newCountry = getCountryBySymbolOrCode(newSymbolOrCode);
-      const conversionRate = newCountry.rateToUSD / oldCountry.rateToUSD;
-      return prev.map(card => ({
-        ...card,
-        balance: card.balance * conversionRate
-      }));
-    });
-
-    setSystemUsers((prev) => {
-      const oldCountry = getCountryBySymbolOrCode(wallet.currency);
-      const newCountry = getCountryBySymbolOrCode(newSymbolOrCode);
-      const conversionRate = newCountry.rateToUSD / oldCountry.rateToUSD;
-      return prev.map(user => ({
-        ...user,
-        balance: user.balance * conversionRate
-      }));
-    });
+    setWallet((prev) => ({ ...prev, currency: newSymbolOrCode }));
   };
 
   const handleQuickAction = (key: string) => {

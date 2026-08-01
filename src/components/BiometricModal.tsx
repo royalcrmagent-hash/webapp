@@ -123,7 +123,7 @@ export const BiometricModal: React.FC<BiometricModalProps> = ({
             )}
             {status === 'scanning' && (
               <p className="text-xs font-bold text-emerald-400 flex items-center justify-center gap-1.5 animate-pulse">
-                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                <RefreshCw className="w-3.5 h-3.5 animate-scode" />
                 Verifying Biometric Credentials...
               </p>
             )}
@@ -179,7 +179,7 @@ export const BiometricModal: React.FC<BiometricModalProps> = ({
             className="w-full bg-slate-800/80 hover:bg-slate-800 text-slate-300 text-xs font-bold py-2.5 rounded-xl border border-slate-700/60 transition flex items-center justify-center gap-1.5"
           >
             <Lock className="w-3.5 h-3.5 text-slate-400" />
-            <span>Use 4-Digit Security PIN Instead</span>
+            <span>Use 4-Digit Security Code Instead</span>
           </button>
         </div>
       </div>

@@ -38,7 +38,7 @@ export const ALL_COUNTRIES: CountryCurrency[] = [
   { code: 'NGN', name: 'Nigeria', flag: '🇳🇬', symbol: '₦', rateToUSD: 1520.0, rateToBDT: 0.078, dialCode: '+234' },
   { code: 'IDR', name: 'Indonesia', flag: '🇮🇩', symbol: 'Rp', rateToUSD: 16250.0, rateToBDT: 0.0073, dialCode: '+62' },
   { code: 'VND', name: 'Vietnam', flag: '🇻🇳', symbol: '₫', rateToUSD: 25450.0, rateToBDT: 0.0047, dialCode: '+84' },
-  { code: 'PHP', name: 'Philippines', flag: '🇵🇭', symbol: '₱', rateToUSD: 58.5, rateToBDT: 2.05, dialCode: '+63' },
+  { code: 'PHP', name: 'Philipcodees', flag: '🇵🇭', symbol: '₱', rateToUSD: 58.5, rateToBDT: 2.05, dialCode: '+63' },
   { code: 'LKR', name: 'Sri Lanka', flag: '🇱🇰', symbol: 'Rs', rateToUSD: 303.5, rateToBDT: 0.39, dialCode: '+94' },
   { code: 'NPR', name: 'Nepal', flag: '🇳🇵', symbol: 'Rs', rateToUSD: 133.6, rateToBDT: 0.88, dialCode: '+977' },
   { code: 'SEK', name: 'Sweden', flag: '🇸🇪', symbol: 'kr', rateToUSD: 10.6, rateToBDT: 11.2, dialCode: '+46' },

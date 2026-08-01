@@ -1,21 +1,21 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Receipt, CheckCircle2, Zap, Droplets, Wifi, Flame, ChevronRight } from 'lucide-react';
-import { WalletState, Transaction } from '../../types';
+import { AppState, Transaction } from '../../types';
 import { PopupDialog, DialogType } from '../ui/PopupDialog';
 
 interface BillPayViewProps {
-  wallet: WalletState;
+  app: AppState;
   onBack: () => void;
   onBillPaySuccess: (txn: Transaction, newBalance: number) => void;
 }
 
 export const BillPayView: React.FC<BillPayViewProps> = ({
-  wallet,
+  app,
   onBack,
   onBillPaySuccess,
 }) => {
   const [billerCategory, setBillerCategory] = useState<'electricity' | 'water' | 'internet' | 'gas'>('electricity');
-  const [accountNo, setAccountNo] = useState('DESCO-8812920');
+  const [profileId, setAccountNo] = useState('DESCO-8812920');
   const [amount, setAmount] = useState('1850');
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -54,21 +54,21 @@ export const BillPayView: React.FC<BillPayViewProps> = ({
       openPopup('Invalid Amount', 'Enter valid amount', 'warning');
       return;
     }
-    if (numAmount > wallet.balance) {
-      openPopup('Insufficient Balance', 'Insufficient wallet balance', 'error');
+    if (numAmount > app.balance) {
+      openPopup('Insufficient Balance', 'Insufficient app balance', 'error');
       return;
     }
 
     const selectedBiller = billers.find((b) => b.id === billerCategory);
-    const newBalance = wallet.balance - numAmount;
+    const newBalance = app.balance - numAmount;
     const now = new Date();
 
-    const txn: Transaction = {
+    const txn: Transaction = { userId: app.user.profileId,
       id: `TXN${Math.floor(100000 + Math.random() * 900000)}`,
       type: 'bill_pay',
       title: `${selectedBiller?.name || 'Bill Payment'}`,
-      recipientName: accountNo,
-      recipientPhone: `Bill Acc: ${accountNo}`,
+      recipientName: profileId,
+      recipientPhone: `Bill Acc: ${profileId}`,
       amount: numAmount,
       fee: 0,
       date: 'Today',
@@ -131,7 +131,7 @@ export const BillPayView: React.FC<BillPayViewProps> = ({
             <label className="text-xs font-semibold text-slate-400">Bill Account / Customer ID</label>
             <input
               type="text"
-              value={accountNo}
+              value={profileId}
               onChange={(e) => setAccountNo(e.target.value)}
               className="w-full mt-1 bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-3 text-xs text-white focus:outline-none focus:border-sky-500 font-mono"
             />
@@ -140,7 +140,7 @@ export const BillPayView: React.FC<BillPayViewProps> = ({
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center space-y-2">
             <label className="text-xs text-slate-400 font-medium">Bill Amount</label>
             <div className="flex items-center justify-center gap-1">
-              <span className="text-2xl font-bold text-sky-400">{wallet.currency}</span>
+              <span className="text-2xl font-bold text-sky-400">{app.currency}</span>
               <input
                 type="number"
                 value={amount}
@@ -183,7 +183,7 @@ export const BillPayView: React.FC<BillPayViewProps> = ({
               onClick={handlePayBill}
               className="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-3.5 rounded-2xl transition flex items-center justify-center gap-2 shadow-lg shadow-sky-500/20"
             >
-              <span>Pay Bill ({wallet.currency}{amount})</span>
+              <span>Pay Bill ({app.currency}{amount})</span>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
@@ -193,7 +193,7 @@ export const BillPayView: React.FC<BillPayViewProps> = ({
           <CheckCircle2 className="w-16 h-16 text-sky-400 animate-bounce" />
           <h2 className="text-2xl font-bold text-white">Bill Paid Successfully!</h2>
           <p className="text-xs text-slate-400">
-            {wallet.currency}{parseFloat(amount).toLocaleString()} paid for Account {accountNo}.
+            {app.currency}{parseFloat(amount).toLocaleString()} paid for Account {profileId}.
           </p>
           <button
             onClick={onBack}

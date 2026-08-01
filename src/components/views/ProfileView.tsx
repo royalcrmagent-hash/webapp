@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { ShieldCheck, Key, RefreshCw, Smartphone, DollarSign, ArrowLeft, Check, LogIn, ShieldAlert, UserCheck, Globe, ChevronRight, TrendingUp, ArrowRightLeft, Sparkles, CheckCircle2 } from 'lucide-react';
-import { WalletState, Currency, UserAccount } from '../../types';
+import { AppState, Currency, UserAccount } from '../../types';
 import { CountrySelectorModal } from './CountrySelectorModal';
 import { ALL_COUNTRIES, getCountryBySymbolOrCode, CountryCurrency } from '../../data/countries';
 import { PopupDialog, DialogType } from '../ui/PopupDialog';
 
 interface ProfileViewProps {
-  wallet: WalletState;
+  app: AppState;
   currentUser?: UserAccount | null;
   onUpdatePin: (newPin: string) => void;
   onUpdateCurrency: (curr: Currency) => void;
@@ -18,7 +18,7 @@ interface ProfileViewProps {
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
-  wallet,
+  app,
   currentUser,
   onUpdatePin,
   onUpdateCurrency,
@@ -31,7 +31,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showCountryModal, setShowCountryModal] = useState(false);
   const [oldPinInput, setOldPinInput] = useState('');
   const [newPinInput, setNewPinInput] = useState('');
-  const [pinErrorMsg, setPinErrorMsg] = useState<string | null>(null);
+  const [codeErrorMsg, setPinErrorMsg] = useState<string | null>(null);
   const [calcAmount, setCalcAmount] = useState<string>('100');
   const [rateChangedBanner, setRateChangedBanner] = useState<string | null>(null);
 
@@ -55,7 +55,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     setDialogState((prev) => ({ ...prev, isOpen: false }));
   };
 
-  const currentCountry = getCountryBySymbolOrCode(wallet.currency);
+  const currentCountry = getCountryBySymbolOrCode(app.currency);
 
   const handleCurrencyChange = (c: CountryCurrency) => {
     onUpdateCurrency(c.symbol as Currency);
@@ -76,16 +76,16 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   const handleSavePin = () => {
     setPinErrorMsg(null);
-    if (!oldPinInput || oldPinInput.trim() !== wallet.user.pin) {
-      setPinErrorMsg('Current PIN is incorrect. Please try again.');
+    if (!oldPinInput || oldPinInput.trim() !== app.user.code) {
+      setPinErrorMsg('Current Code is incorrect. Please try again.');
       return;
     }
     if (newPinInput.length !== 4 || !/^\d{4}$/.test(newPinInput)) {
-      setPinErrorMsg('New PIN must be exactly 4 numeric digits.');
+      setPinErrorMsg('New Code must be exactly 4 numeric digits.');
       return;
     }
     if (newPinInput === oldPinInput) {
-      setPinErrorMsg('New PIN cannot be the same as Current PIN.');
+      setPinErrorMsg('New Code cannot be the same as Current Code.');
       return;
     }
     onUpdatePin(newPinInput);
@@ -93,7 +93,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     setOldPinInput('');
     setNewPinInput('');
     setPinErrorMsg(null);
-    openPopup('PIN Updated', 'Security PIN updated successfully!', 'success');
+    openPopup('Code Updated', 'Security Code updated successfully!', 'success');
   };
 
   const convertedValue = (parseFloat(calcAmount || '0') * currentCountry.rateToUSD).toLocaleString('en-US', {
@@ -115,8 +115,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-4 text-center space-y-2">
         <div className="relative w-16 h-16 mx-auto">
           <img
-            src={wallet.user.avatar}
-            alt={wallet.user.name}
+            src={app.user.avatar}
+            alt={app.user.name}
             className="w-16 h-16 rounded-full object-cover ring-4 ring-emerald-500/30"
           />
           <div className="absolute bottom-0 right-0 p-1 bg-emerald-500 text-slate-950 rounded-full">
@@ -124,10 +124,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
         </div>
         <div>
-          <h2 className="text-base font-extrabold text-white">{wallet.user.name}</h2>
-          <p className="text-xs font-mono text-slate-400">{wallet.user.phone}</p>
+          <h2 className="text-base font-extrabold text-white">{app.user.name}</h2>
+          <p className="text-xs font-mono text-slate-400">{app.user.phone}</p>
           <span className="inline-block mt-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded-full text-[10px] font-mono">
-            {wallet.user.accountNo}
+            {app.user.profileId}
           </span>
         </div>
       </div>
@@ -160,7 +160,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         )}
 
         <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block px-1 pt-2">
-          Wallet Preferences
+          App Preferences
         </label>
 
         {/* Country & Currency Selector */}
@@ -224,7 +224,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <div className="text-right">
                 <span>Value ({currentCountry.code}): </span>
                 <strong className="text-emerald-400">
-                  {currentCountry.symbol}{wallet.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {currentCountry.symbol}{app.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </strong>
               </div>
             </div>
@@ -305,7 +305,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
         </div>
 
-        {/* Change PIN */}
+        {/* Change Code */}
         <div
           onClick={handleOpenPinModal}
           className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-800/80 transition"
@@ -315,9 +315,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <Key className="w-4 h-4" />
             </div>
             <div>
-              <h4 className="text-xs font-bold text-white">Wallet Security PIN</h4>
+              <h4 className="text-xs font-bold text-white">App Security Code</h4>
               <p className="text-[11px] text-slate-400">
-                Change or update your 4-digit security PIN
+                Change or update your 4-digit security Code
               </p>
             </div>
           </div>
@@ -341,7 +341,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
       </div>
 
-      {/* PIN Change Modal */}
+      {/* Code Change Modal */}
       {showPinModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 w-full max-w-xs space-y-3.5 shadow-2xl">
@@ -350,21 +350,21 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 <Key className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">Change Security PIN</h3>
-                <p className="text-[10px] text-slate-400">Verify current PIN to setup new PIN</p>
+                <h3 className="text-sm font-bold text-white">Change Security Code</h3>
+                <p className="text-[10px] text-slate-400">Verify current Code to setup new Code</p>
               </div>
             </div>
 
-            {pinErrorMsg && (
+            {codeErrorMsg && (
               <div className="bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs p-2.5 rounded-xl font-medium text-center">
-                {pinErrorMsg}
+                {codeErrorMsg}
               </div>
             )}
 
             <div className="space-y-1">
-              <label className="text-[11px] text-slate-300 font-semibold block">Enter Current 4-Digit PIN</label>
+              <label className="text-[11px] text-slate-300 font-semibold block">Enter Current 4-Digit Code</label>
               <input
-                type="password"
+                type="passkey"
                 maxLength={4}
                 value={oldPinInput}
                 onChange={(e) => setOldPinInput(e.target.value)}
@@ -374,9 +374,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
 
             <div className="space-y-1">
-              <label className="text-[11px] text-slate-300 font-semibold block">Enter New 4-Digit PIN</label>
+              <label className="text-[11px] text-slate-300 font-semibold block">Enter New 4-Digit Code</label>
               <input
-                type="password"
+                type="passkey"
                 maxLength={4}
                 value={newPinInput}
                 onChange={(e) => setNewPinInput(e.target.value)}
@@ -396,7 +396,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 onClick={handleSavePin}
                 className="flex-1 bg-emerald-500 text-slate-950 py-2.5 rounded-xl text-xs font-bold hover:bg-emerald-400 transition"
               >
-                Update PIN
+                Update Code
               </button>
             </div>
           </div>
@@ -407,7 +407,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       <CountrySelectorModal
         isOpen={showCountryModal}
         onClose={() => setShowCountryModal(false)}
-        selectedCurrencySymbol={wallet.currency}
+        selectedCurrencySymbol={app.currency}
         onSelectCountry={(country) => {
           handleCurrencyChange(country);
         }}

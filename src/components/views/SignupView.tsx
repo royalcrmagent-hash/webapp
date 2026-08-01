@@ -34,8 +34,8 @@ export const SignupView: React.FC<SignupViewProps> = ({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
-  const [pin, setPin] = useState('');
+  const [passkey, setPasskey] = useState('');
+  const [code, setPin] = useState('');
   const [selectedCountry, setSelectedCountry] = useState<CountryCurrency>(ALL_COUNTRIES[0]);
   const [showCountryModal, setShowCountryModal] = useState(false);
   const [countrySearch, setCountrySearch] = useState('');
@@ -81,8 +81,8 @@ export const SignupView: React.FC<SignupViewProps> = ({
       return;
     }
 
-    if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
-      setError('Security PIN must be exactly 4 numeric digits.');
+    if (code.length !== 4 || !/^\d{4}$/.test(code)) {
+      setError('Security Code must be exactly 4 numeric digits.');
       return;
     }
 
@@ -112,9 +112,9 @@ export const SignupView: React.FC<SignupViewProps> = ({
         name: name.trim(),
         email: cleanEmail,
         phone: fullPhone,
-        accountNo: generatedAccountNo,
-        pin: pin.trim(),
-        password: password.trim(),
+        profileId: generatedAccountNo,
+        code: code.trim(),
+        passkey: passkey.trim(),
         balance: 0,
         role: 'user',
         isFrozen: false,
@@ -143,9 +143,9 @@ export const SignupView: React.FC<SignupViewProps> = ({
             </div>
           </div>
           <div>
-            <h1 className="text-base font-black text-white tracking-tight">PayPulse</h1>
+            <h1 className="text-base font-black text-white tracking-tight">PulseTracker</h1>
             <span className="text-[10px] text-emerald-400 font-extrabold uppercase tracking-widest">
-              Digital Wallet
+              Digital App
             </span>
           </div>
         </div>
@@ -170,7 +170,7 @@ export const SignupView: React.FC<SignupViewProps> = ({
             <div className="space-y-1">
               <h3 className="text-xl font-black text-white">Registration Successful!</h3>
               <p className="text-xs text-slate-300">
-                Your digital wallet account has been successfully created and saved.
+                Your digital app account has been successfully created and saved.
               </p>
             </div>
             <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 text-left space-y-1 text-xs">
@@ -189,7 +189,7 @@ export const SignupView: React.FC<SignupViewProps> = ({
                 <span className="text-emerald-400 font-bold">{email}</span>
               </div>
               <div className="flex justify-between text-slate-400">
-                <span>4-Digit PIN:</span>
+                <span>4-Digit Code:</span>
                 <span className="text-white font-mono font-bold">****</span>
               </div>
             </div>
@@ -310,19 +310,19 @@ export const SignupView: React.FC<SignupViewProps> = ({
                 </div>
               </div>
 
-              {/* Password & PIN Grid */}
+              {/* Passkey & Code Grid */}
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300 block">Password</label>
+                  <label className="text-xs font-semibold text-slate-300 block">Passkey</label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                       <Lock className="w-3.5 h-3.5" />
                     </div>
                     <input
-                      type="password"
+                      type="passkey"
                       required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      value={passkey}
+                      onChange={(e) => setPasskey(e.target.value)}
                       placeholder="Min 4 chars"
                       className="w-full bg-slate-900 border border-slate-800 focus:border-emerald-500 text-white rounded-2xl pl-8 pr-2 py-2.5 text-xs placeholder-slate-500 transition outline-none"
                     />
@@ -331,7 +331,7 @@ export const SignupView: React.FC<SignupViewProps> = ({
 
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-300 block flex items-center justify-between">
-                    <span>4-Digit PIN</span>
+                    <span>4-Digit Code</span>
                     <span className="text-[10px] text-emerald-400 font-mono">0-9 Only</span>
                   </label>
                   <div className="relative">
@@ -339,12 +339,12 @@ export const SignupView: React.FC<SignupViewProps> = ({
                       <KeyRound className="w-3.5 h-3.5" />
                     </div>
                     <input
-                      type="password"
+                      type="passkey"
                       inputMode="numeric"
                       pattern="[0-9]*"
                       maxLength={4}
                       required
-                      value={pin}
+                      value={code}
                       onChange={handlePinChange}
                       placeholder="1234"
                       className="w-full bg-slate-900 border border-slate-800 focus:border-emerald-500 text-white rounded-2xl pl-8 pr-2 py-2.5 text-xs placeholder-slate-500 transition outline-none font-mono text-center tracking-widest font-bold"
@@ -363,7 +363,7 @@ export const SignupView: React.FC<SignupViewProps> = ({
                   className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500/20 cursor-pointer"
                 />
                 <label htmlFor="agreedTerms" className="text-[11px] text-slate-400 select-none cursor-pointer">
-                  I agree to PayPulse <span className="text-emerald-400 underline">Terms of Service</span> & Privacy Policy.
+                  I agree to PulseTracker <span className="text-emerald-400 underline">Terms of Service</span> & Privacy Policy.
                 </label>
               </div>
 
@@ -375,12 +375,12 @@ export const SignupView: React.FC<SignupViewProps> = ({
               >
                 {isLoading ? (
                   <span className="flex items-center gap-2">
-                    <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
+                    <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-scode"></span>
                     <span>Creating Account...</span>
                   </span>
                 ) : (
                   <>
-                    <span>Create Wallet Account</span>
+                    <span>Create App Account</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}

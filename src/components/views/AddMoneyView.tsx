@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Building2, CreditCard, CheckCircle2, ChevronRight, ShieldCheck } from 'lucide-react';
-import { WalletState, Transaction } from '../../types';
+import { AppState, Transaction } from '../../types';
 import { getCountryBySymbolOrCode } from '../../data/countries';
 import { PopupDialog, DialogType } from '../ui/PopupDialog';
 
 interface AddMoneyViewProps {
-  wallet: WalletState;
+  app: AppState;
   onBack: () => void;
   onAddMoneySuccess: (txn: Transaction, newBalance: number) => void;
 }
 
 export const AddMoneyView: React.FC<AddMoneyViewProps> = ({
-  wallet,
+  app,
   onBack,
   onAddMoneySuccess,
 }) => {
@@ -63,19 +63,19 @@ export const AddMoneyView: React.FC<AddMoneyViewProps> = ({
     setIsProcessing(true);
     setTimeout(() => {
       const now = new Date();
-      const newBalance = wallet.balance + numAmount;
-      const txn: Transaction = {
+      const newBalance = app.balance + numAmount;
+      const txn: Transaction = { userId: app.user.profileId,
         id: `TXN${Math.floor(100000 + Math.random() * 900000)}`,
         type: 'cash_in',
-        title: `Add Money (${method === 'card' ? 'Card' : 'External'})`,
+        title: `Add Points (${method === 'card' ? 'Card' : 'External'})`,
         recipientName: sourceName,
-        recipientPhone: 'Deposit to Wallet',
+        recipientPhone: 'Deposit to App',
         amount: numAmount,
         fee: 0,
         date: 'Today',
         time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         status: 'completed',
-        reference: 'Wallet Deposit',
+        reference: 'App Deposit',
         category: catTag,
       };
 
@@ -95,7 +95,7 @@ export const AddMoneyView: React.FC<AddMoneyViewProps> = ({
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h2 className="text-base font-bold text-white">Add Money to Wallet</h2>
+        <h2 className="text-base font-bold text-white">Add Points to App</h2>
         <div className="w-9 h-9"></div>
       </div>
 
@@ -145,13 +145,13 @@ export const AddMoneyView: React.FC<AddMoneyViewProps> = ({
 
           {/* Enter Amount */}
           {(() => {
-            const currentCountry = getCountryBySymbolOrCode(wallet.currency);
+            const currentCountry = getCountryBySymbolOrCode(app.currency);
             const numAmount = parseFloat(amount || '0');
             return (
               <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center space-y-2">
                 <label className="text-xs text-slate-400 font-medium">Deposit Amount</label>
                 <div className="flex items-center justify-center gap-1">
-                  <span className="text-2xl font-bold text-emerald-400">{wallet.currency}</span>
+                  <span className="text-2xl font-bold text-emerald-400">{app.currency}</span>
                   <input
                     type="number"
                     value={amount}
@@ -217,7 +217,7 @@ export const AddMoneyView: React.FC<AddMoneyViewProps> = ({
 
           <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-3 text-xs text-slate-400 flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
-            <span>Encrypted payment. Funds arrive instantly in your wallet balance.</span>
+            <span>Encrypted payment. Funds arrive instantly in your app balance.</span>
           </div>
 
           <div className="mt-auto pt-4">
@@ -230,7 +230,7 @@ export const AddMoneyView: React.FC<AddMoneyViewProps> = ({
                 <span>Adding Funds...</span>
               ) : (
                 <>
-                  <span>Add {wallet.currency}{parseFloat(amount || '0').toLocaleString()}</span>
+                  <span>Add {app.currency}{parseFloat(amount || '0').toLocaleString()}</span>
                   <ChevronRight className="w-4 h-4" />
                 </>
               )}
@@ -242,7 +242,7 @@ export const AddMoneyView: React.FC<AddMoneyViewProps> = ({
           <CheckCircle2 className="w-16 h-16 text-emerald-400 animate-bounce" />
           <h2 className="text-2xl font-bold text-white">Money Added Successfully!</h2>
           <p className="text-xs text-slate-400">
-            {wallet.currency}{parseFloat(amount).toLocaleString()} deposited from {sourceName}.
+            {app.currency}{parseFloat(amount).toLocaleString()} deposited from {sourceName}.
           </p>
           <button
             onClick={onBack}

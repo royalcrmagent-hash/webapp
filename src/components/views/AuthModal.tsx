@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { UserAccount } from '../../types';
 import { LoginView } from './LoginView';
 import { SignupView } from './SignupView';
-import { ForgotPasswordView } from './ForgotPasswordView';
+import { ForgotPasskeyView } from './ForgotPasskeyView';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -40,7 +40,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               onClose();
             }}
             onGoToSignup={() => setCurrentScreen('signup')}
-            onGoToForgotPassword={() => setCurrentScreen('forgot')}
+            onGoToForgotPasskey={() => setCurrentScreen('forgot')}
             onClose={onClose}
           />
         )}
@@ -57,7 +57,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         )}
 
         {currentScreen === 'forgot' && (
-          <ForgotPasswordView
+          <ForgotPasskeyView
             systemUsers={systemUsers}
             onUpdateUserCredentials={(emailOrPhone, newPass, newPin) => {
               onUpdateUserCredentials(emailOrPhone, newPass, newPin);

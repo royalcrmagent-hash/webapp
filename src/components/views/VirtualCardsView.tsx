@@ -17,11 +17,11 @@ import {
   Trash2,
   Wifi,
 } from 'lucide-react';
-import { WalletState, VirtualCard, VirtualCardType } from '../../types';
+import { AppState, VirtualCard, VirtualCardType } from '../../types';
 import { PopupDialog, DialogType } from '../ui/PopupDialog';
 
 interface VirtualCardsViewProps {
-  wallet: WalletState;
+  app: AppState;
   cards: VirtualCard[];
   initialSelectedType?: VirtualCardType | 'all' | null;
   onBack: () => void;
@@ -33,7 +33,7 @@ interface VirtualCardsViewProps {
 }
 
 export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
-  wallet,
+  app,
   cards,
   initialSelectedType = 'all',
   onBack,
@@ -130,10 +130,10 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
       openPopup('Invalid Amount', 'Deposit amount cannot be negative.', 'warning');
       return;
     }
-    if (deposit > wallet.balance) {
+    if (deposit > app.balance) {
       openPopup(
         'Insufficient Balance',
-        `You do not have enough wallet balance. Available balance: ${wallet.currency}${wallet.balance.toFixed(2)}`,
+        `You do not have enough app balance. Available balance: ${app.currency}${app.balance.toFixed(2)}`,
         'error'
       );
       return;
@@ -173,7 +173,7 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
       type: issueCardType,
       cardName: issueCardName.trim() || defaultLabel,
       cardNumber: formattedNum,
-      cardholderName: (wallet.user.name || 'ACCOUNT HOLDER').toUpperCase(),
+      cardholderName: (app.user.name || 'ACCOUNT HOLDER').toUpperCase(),
       expiryDate: '08/30',
       cvv: randomCvv,
       balance: deposit,
@@ -198,17 +198,17 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
       openPopup('Invalid Amount', 'Please enter a valid top up amount.', 'warning');
       return;
     }
-    if (amt > wallet.balance) {
+    if (amt > app.balance) {
       openPopup(
         'Insufficient Balance',
-        `Insufficient wallet balance. Available: ${wallet.currency}${wallet.balance.toFixed(2)}`,
+        `Insufficient app balance. Available: ${app.currency}${app.balance.toFixed(2)}`,
         'error'
       );
       return;
     }
 
     onTopUpCard(topUpCardTarget.id, amt);
-    showToast(`Added ${wallet.currency}${amt} to ${topUpCardTarget.cardName}!`);
+    showToast(`Added ${app.currency}${amt} to ${topUpCardTarget.cardName}!`);
     setTopUpCardTarget(null);
     setTopUpAmount('');
   };
@@ -225,14 +225,14 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
     if (amt > withdrawCardTarget.balance) {
       openPopup(
         'Card Balance Exceeded',
-        `Cannot withdraw more than card balance (${wallet.currency}${withdrawCardTarget.balance.toFixed(2)}).`,
+        `Cannot withdraw more than card balance (${app.currency}${withdrawCardTarget.balance.toFixed(2)}).`,
         'warning'
       );
       return;
     }
 
     onWithdrawCard(withdrawCardTarget.id, amt);
-    showToast(`Transferred ${wallet.currency}${amt} back to main wallet!`);
+    showToast(`Transferred ${app.currency}${amt} back to main app!`);
     setWithdrawCardTarget(null);
     setWithdrawAmount('');
   };
@@ -273,13 +273,13 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
         </button>
       </div>
 
-      {/* Wallet Balance Summary Card */}
+      {/* App Balance Summary Card */}
       <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border border-slate-800/90 rounded-2xl p-3.5 flex items-center justify-between shadow-lg">
         <div>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Main Wallet Balance</p>
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Main App Balance</p>
           <p className="text-lg font-black text-emerald-400 font-mono mt-0.5">
-            {wallet.currency}
-            {wallet.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {app.currency}
+            {app.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
         </div>
         <div className="text-right">
@@ -366,7 +366,7 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
                   {card.isFrozen && (
                     <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm z-20 flex flex-col items-center justify-center p-4 text-center">
                       <div className="w-10 h-10 rounded-2xl bg-cyan-500/20 border border-cyan-400/50 flex items-center justify-center text-cyan-300 mb-2">
-                        <Snowflake className="w-5 h-5 animate-spin" />
+                        <Snowflake className="w-5 h-5 animate-scode" />
                       </div>
                       <span className="text-xs font-black tracking-widest text-cyan-300 uppercase">Card Frozen</span>
                       <p className="text-[10px] text-slate-400 mt-0.5">Click Unfreeze to reactivate card</p>
@@ -393,7 +393,7 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
                       <div className="bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/10 text-right">
                         <span className="text-[8px] font-bold text-white/60 block uppercase">Card Balance</span>
                         <span className="text-xs font-black font-mono text-emerald-400">
-                          {wallet.currency}
+                          {app.currency}
                           {card.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       </div>
@@ -555,7 +555,7 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
                     onClick={() => {
                       openPopup(
                         'Close Virtual Card',
-                        `Are you sure you want to close/delete ${card.cardName}? Remaining balance will be refunded to your wallet.`,
+                        `Are you sure you want to close/delete ${card.cardName}? Remaining balance will be refunded to your app.`,
                         'confirm',
                         () => {
                           if (card.balance > 0) {
@@ -609,7 +609,7 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
                 <div className="grid grid-cols-3 gap-2">
                   {[
                     { type: 'visa', name: 'Virtual Visa', icon: '🟦', desc: 'Global Visa' },
-                    { type: 'mastercard', name: 'MasterCard', icon: '🟧', desc: 'Online Shopping' },
+                    { type: 'mastercard', name: 'MasterCard', icon: '🟧', desc: 'Online Shopcodeg' },
                     { type: 'amex', name: 'Amex Card', icon: '🟩', desc: 'American Express' },
                   ].map((brand) => (
                     <button
@@ -649,12 +649,12 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-slate-300 block">Initial Card Deposit</label>
                   <span className="text-[10px] text-slate-400 font-mono">
-                    Avail: {wallet.currency}{wallet.balance.toFixed(2)}
+                    Avail: {app.currency}{app.balance.toFixed(2)}
                   </span>
                 </div>
                 <div className="relative">
                   <span className="absolute left-3.5 top-3 text-xs text-slate-400 font-bold font-mono">
-                    {wallet.currency}
+                    {app.currency}
                   </span>
                   <input
                     type="number"
@@ -710,9 +710,9 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
 
             <form onSubmit={handleConfirmTopUp} className="space-y-4">
               <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 flex items-center justify-between text-xs">
-                <span className="text-slate-400">Available Wallet Balance:</span>
+                <span className="text-slate-400">Available App Balance:</span>
                 <span className="font-mono font-bold text-emerald-400">
-                  {wallet.currency}{wallet.balance.toFixed(2)}
+                  {app.currency}{app.balance.toFixed(2)}
                 </span>
               </div>
 
@@ -720,7 +720,7 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
                 <label className="text-xs font-bold text-slate-300 block">Enter Top Up Amount</label>
                 <div className="relative">
                   <span className="absolute left-3.5 top-3 text-xs text-slate-400 font-mono font-bold">
-                    {wallet.currency}
+                    {app.currency}
                   </span>
                   <input
                     type="number"
@@ -770,7 +770,7 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
               <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 flex items-center justify-between text-xs">
                 <span className="text-slate-400">Current Card Balance:</span>
                 <span className="font-mono font-bold text-emerald-400">
-                  {wallet.currency}{withdrawCardTarget.balance.toFixed(2)}
+                  {app.currency}{withdrawCardTarget.balance.toFixed(2)}
                 </span>
               </div>
 
@@ -778,7 +778,7 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
                 <label className="text-xs font-bold text-slate-300 block">Enter Withdrawal Amount</label>
                 <div className="relative">
                   <span className="absolute left-3.5 top-3 text-xs text-slate-400 font-mono font-bold">
-                    {wallet.currency}
+                    {app.currency}
                   </span>
                   <input
                     type="number"
@@ -804,7 +804,7 @@ export const VirtualCardsView: React.FC<VirtualCardsViewProps> = ({
                   type="submit"
                   className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 py-3 rounded-2xl text-xs font-extrabold shadow-lg"
                 >
-                  Confirm Transfer to Wallet
+                  Confirm Transfer to App
                 </button>
               </div>
             </form>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserAccount, Transaction, WalletState } from '../../types';
+import { UserAccount, Transaction, AppState } from '../../types';
 import {
   Users,
   ShieldAlert,
@@ -32,7 +32,7 @@ interface AdminPanelProps {
   biometricRequired: boolean;
   onUpdateUsers: (users: UserAccount[]) => void;
   onUpdateBiometricSettings: (threshold: number, required: boolean) => void;
-  onSwitchToUserWallet: () => void;
+  onSwitchToUserApp: () => void;
   onLogout: () => void;
 }
 
@@ -44,7 +44,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   biometricRequired,
   onUpdateUsers,
   onUpdateBiometricSettings,
-  onSwitchToUserWallet,
+  onSwitchToUserApp,
   onLogout,
 }) => {
   const [activeTab, setActiveTab] = useState<'users' | 'transactions' | 'settings'>('users');
@@ -104,7 +104,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       u.phone.includes(searchQuery) ||
-      u.accountNo.toLowerCase().includes(searchQuery.toLowerCase())
+      u.profileId.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Filtered transactions
@@ -173,11 +173,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
           <div className="flex items-center gap-2">
             <button
-              onClick={onSwitchToUserWallet}
+              onClick={onSwitchToUserApp}
               className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-md"
             >
               <Wallet className="w-3.5 h-3.5" />
-              <span>User Wallet</span>
+              <span>User App</span>
             </button>
 
             <button

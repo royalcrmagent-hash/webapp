@@ -16,13 +16,13 @@ import {
   Zap,
   Fingerprint,
 } from 'lucide-react';
-import { Contact, Transaction, WalletState, UserAccount } from '../../types';
+import { Contact, Transaction, AppState, UserAccount } from '../../types';
 import { BiometricModal } from '../BiometricModal';
 import { getCountryBySymbolOrCode } from '../../data/countries';
 import { PopupDialog, DialogType } from '../ui/PopupDialog';
 
 interface SendMoneyViewProps {
-  wallet: WalletState;
+  app: AppState;
   systemUsers?: UserAccount[];
   onBack: () => void;
   onSendSuccess: (txn: Transaction, newBalance: number) => void;
@@ -32,7 +32,7 @@ interface SendMoneyViewProps {
 }
 
 export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
-  wallet,
+  app,
   systemUsers = [],
   onBack,
   onSendSuccess,
@@ -40,9 +40,9 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
   biometricThreshold = 1000,
   biometricRequired = true,
 }) => {
-  // Steps: 'select_recipient' | 'enter_amount' | 'enter_pin' | 'confirming' | 'success'
+  // Steps: 'select_recipient' | 'enter_amount' | 'enter_code' | 'confirming' | 'success'
   const [step, setStep] = useState<
-    'select_recipient' | 'enter_amount' | 'enter_pin' | 'confirming' | 'success'
+    'select_recipient' | 'enter_amount' | 'enter_code' | 'confirming' | 'success'
   >(initialRecipient ? 'enter_amount' : 'select_recipient');
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -54,8 +54,8 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
 
   const [amount, setAmount] = useState<string>('');
   const [reference, setReference] = useState<string>('');
-  const [pin, setPin] = useState<string>('');
-  const [pinError, setPinError] = useState<string>('');
+  const [code, setPin] = useState<string>('');
+  const [codeError, setPinError] = useState<string>('');
   const [amountError, setAmountError] = useState<string>('');
   const [completedTxn, setCompletedTxn] = useState<Transaction | null>(null);
   const [showBiometricModal, setShowBiometricModal] = useState<boolean>(false);
@@ -91,7 +91,7 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
     'Groceries',
     'Rent',
     'Entertainment',
-    'Shopping',
+    'Shopcodeg',
     'Food & Dining',
     'Bills',
     'Medical',
@@ -103,7 +103,7 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
   const cleanQ = q.replace(/^@/, '');
 
   // Filter contacts by Name, Phone, Username, or Email
-  const filteredContacts = wallet.contacts.filter((c) => {
+  const filteredContacts = app.contacts.filter(c => c.userId === app.user.profileId).filter((c) => {
     if (!q) return true;
     const matchName = c.name.toLowerCase().includes(cleanQ);
     const matchPhone = c.phone.includes(cleanQ);
@@ -117,7 +117,7 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
     if (!q) return null;
 
     // 1. Direct match in contacts
-    const cMatch = wallet.contacts.find(
+    const cMatch = app.contacts.filter(c => c.userId === app.user.profileId).find(
       (c) =>
         c.phone === q ||
         c.phone.replace(/[^0-9]/g, '') === cleanQ.replace(/[^0-9]/g, '') ||
@@ -130,7 +130,7 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
         name: cMatch.name,
         phone: cMatch.phone,
         username: cMatch.username ? `@${cMatch.username}` : `@${cMatch.name.split(' ')[0].toLowerCase()}`,
-        email: cMatch.email || `${cMatch.username || cleanQ}@wallet.com`,
+        email: cMatch.email || `${cMatch.username || cleanQ}@app.com`,
         avatar: cMatch.avatar,
         isVerified: true,
         badge: 'Saved Contact',
@@ -165,7 +165,7 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
         name: topC.name,
         phone: topC.phone,
         username: topC.username ? `@${topC.username}` : `@${topC.name.split(' ')[0].toLowerCase()}`,
-        email: topC.email || `${topC.username || cleanQ}@wallet.com`,
+        email: topC.email || `${topC.username || cleanQ}@app.com`,
         avatar: topC.avatar,
         isVerified: true,
         badge: 'Matched Contact',
@@ -207,7 +207,7 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
         name: detectedName,
         phone: /^\d+$/.test(cleanQ) ? q : '01700000000',
         username: `@${cleanQ}`,
-        email: q.includes('@') ? q : `${cleanQ}@wallet.com`,
+        email: q.includes('@') ? q : `${cleanQ}@app.com`,
         avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(detectedName)}&background=10b981&color=020617&font-size=0.45&bold=true`,
         isVerified: false,
         badge: 'Detected Name',
@@ -253,13 +253,13 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
       setAmountError('Please enter a valid amount.');
       return;
     }
-    if (numAmount > wallet.balance) {
+    if (numAmount > app.balance) {
       setAmountError(
-        `Insufficient balance. Available: ${wallet.currency}${wallet.balance.toLocaleString()}`
+        `Insufficient balance. Available: ${app.currency}${app.balance.toLocaleString()}`
       );
       return;
     }
-    setStep('enter_pin');
+    setStep('enter_code');
   };
 
   const performFinalTransfer = () => {
@@ -269,7 +269,7 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
     // Process transaction request
     setTimeout(() => {
       const numAmount = parseFloat(amount);
-      const newBalance = wallet.balance - numAmount;
+      const newBalance = app.balance - numAmount;
       const now = new Date();
       const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const dateStr = 'Today';
@@ -278,10 +278,10 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
         ? (customCategory.trim() || 'Custom') 
         : selectedCategory;
 
-      const txn: Transaction = {
+      const txn: Transaction = { userId: app.user.profileId,
         id: `TXN${Math.floor(100000 + Math.random() * 900000)}`,
         type: 'sent',
-        title: 'Send Money',
+        title: 'Send Points',
         recipientName: selectedRecipient?.name || 'Recipient',
         recipientPhone: selectedRecipient?.phone || '',
         amount: numAmount,
@@ -289,7 +289,7 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
         date: dateStr,
         time: timeStr,
         status: 'completed',
-        reference: reference || 'Send Money',
+        reference: reference || 'Send Points',
         category: categoryTag,
       };
 
@@ -309,8 +309,8 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
       return;
     }
 
-    if (pin !== wallet.user.pin) {
-      setPinError('Incorrect PIN. Please verify your 4-digit security PIN.');
+    if (code !== app.user.code) {
+      setPinError('Incorrect Code. Please verify your 4-digit security Code.');
       return;
     }
 
@@ -320,7 +320,7 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
   const handleBiometricSuccess = () => {
     setBiometricVerified(true);
     setShowBiometricModal(false);
-    setPin(wallet.user.pin); // Autofill PIN upon biometric scan
+    setPin(app.user.code); // Autofill Code upon biometric scan
     performFinalTransfer();
   };
 
@@ -337,27 +337,27 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
         <div className="text-center">
           <h2 className="text-base font-bold text-white flex items-center justify-center gap-1.5">
             <Send className="w-4 h-4 text-emerald-400" />
-            Send Money
+            Send Points
           </h2>
-          <p className="text-[11px] text-slate-400">Instant Wallet Transfer</p>
+          <p className="text-[11px] text-slate-400">Instant App Transfer</p>
         </div>
         <div className="w-9 h-9 flex items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-semibold">
-          {wallet.currency}
+          {app.currency}
         </div>
       </div>
 
       {/* Available Balance Pill */}
       {(() => {
-        const currentCountry = getCountryBySymbolOrCode(wallet.currency);
-        const displayBalance = wallet.balance;
+        const currentCountry = getCountryBySymbolOrCode(app.currency);
+        const displayBalance = app.balance;
         return (
           <div className="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-3 mb-4 flex items-center justify-between shadow-inner">
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></div>
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-codeg"></div>
               <span className="text-xs text-slate-400">Available Balance ({currentCountry.code}):</span>
             </div>
             <span className="text-sm font-bold text-emerald-400">
-              {wallet.currency}
+              {app.currency}
               {displayBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
@@ -568,7 +568,7 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
 
           {/* Amount Input */}
           {(() => {
-            const currentCountry = getCountryBySymbolOrCode(wallet.currency);
+            const currentCountry = getCountryBySymbolOrCode(app.currency);
             const numAmount = parseFloat(amount || '0');
             return (
               <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 text-center">
@@ -577,7 +577,7 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
                 </label>
 
                 <div className="flex items-center justify-center gap-1 my-2">
-                  <span className="text-2xl font-bold text-emerald-400">{wallet.currency}</span>
+                  <span className="text-2xl font-bold text-emerald-400">{app.currency}</span>
                   <input
                     type="number"
                     value={amount}
@@ -623,7 +623,7 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
                       : 'bg-slate-800/80 text-slate-300 border-slate-700/80 hover:bg-slate-700'
                   }`}
                 >
-                  +{wallet.currency}
+                  +{app.currency}
                   {q.toLocaleString()}
                 </button>
               ))}
@@ -693,55 +693,55 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
               disabled={!amount || parseFloat(amount) <= 0}
               className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:bg-slate-800 disabled:text-slate-500 text-slate-950 font-bold py-3.5 rounded-2xl transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
             >
-              <span>Proceed to Security PIN</span>
+              <span>Proceed to Security Code</span>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>
       )}
 
-      {/* STEP 3: ENTER SECURITY PIN */}
-      {step === 'enter_pin' && selectedRecipient && (
+      {/* STEP 3: ENTER SECURITY Code */}
+      {step === 'enter_code' && selectedRecipient && (
         <div className="flex-1 flex flex-col space-y-4 justify-between">
           <div>
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center space-y-2">
               <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto ring-1 ring-emerald-500/30">
                 <ShieldCheck className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-bold text-white">Enter 4-Digit Wallet PIN</h3>
+              <h3 className="text-base font-bold text-white">Enter 4-Digit App Code</h3>
               <p className="text-xs text-slate-400">
                 Sending{' '}
                 <span className="text-emerald-400 font-bold">
-                  {wallet.currency}
+                  {app.currency}
                   {parseFloat(amount).toLocaleString()}
                 </span>{' '}
                 to <span className="text-white font-semibold">{selectedRecipient.name}</span>
               </p>
             </div>
 
-            {/* PIN Display Dots */}
+            {/* Code Display Dots */}
             <div className="my-6 flex justify-center items-center gap-3">
               {[0, 1, 2, 3].map((idx) => (
                 <div
                   key={idx}
                   className={`w-11 h-12 rounded-xl border-2 flex items-center justify-center text-xl font-bold transition-all ${
-                    pin[idx]
+                    code[idx]
                       ? 'border-emerald-400 bg-emerald-500/10 text-emerald-400 scale-105'
                       : 'border-slate-800 bg-slate-900 text-slate-600'
                   }`}
                 >
-                  {pin[idx] ? '●' : ''}
+                  {code[idx] ? '●' : ''}
                 </div>
               ))}
             </div>
 
-            {pinError && (
+            {codeError && (
               <p className="text-xs text-rose-400 text-center font-medium mb-2 animate-shake">
-                {pinError}
+                {codeError}
               </p>
             )}
 
-            {/* Onscreen Keypad for PIN */}
+            {/* Onscreen Keypad for Code */}
             <div className="grid grid-cols-3 gap-2.5 max-w-[280px] mx-auto mt-2">
               {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '⌫'].map((key) => (
                 <button
@@ -751,7 +751,7 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
                       setPin('');
                     } else if (key === '⌫') {
                       setPin((prev) => prev.slice(0, -1));
-                    } else if (pin.length < 4) {
+                    } else if (code.length < 4) {
                       setPin((prev) => prev + key);
                     }
                   }}
@@ -778,11 +778,11 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
           <div className="space-y-2 pt-2">
             <button
               onClick={handleExecuteSendMoney}
-              disabled={pin.length !== 4 && !biometricVerified}
+              disabled={code.length !== 4 && !biometricVerified}
               className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:bg-slate-800 disabled:text-slate-500 text-slate-950 font-extrabold py-3.5 rounded-2xl transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
             >
               <Send className="w-4 h-4" />
-              <span>Confirm & Send Money</span>
+              <span>Confirm & Send Points</span>
             </button>
             <button
               onClick={() => setStep('enter_amount')}
@@ -799,7 +799,7 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
         <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4">
           <div className="relative w-20 h-20 flex items-center justify-center">
             <div className="absolute inset-0 rounded-full border-4 border-slate-800"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-emerald-400 border-t-transparent animate-spin"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-emerald-400 border-t-transparent animate-scode"></div>
             <Send className="w-8 h-8 text-emerald-400" />
           </div>
           <div>
@@ -823,7 +823,7 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
                 Transaction Successful
               </span>
               <h2 className="text-2xl font-extrabold text-white mt-2">
-                {wallet.currency}
+                {app.currency}
                 {completedTxn.amount.toLocaleString()}
               </h2>
               <p className="text-xs text-slate-400">Sent to {completedTxn.recipientName}</p>
@@ -852,8 +852,8 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
               <div className="flex justify-between pt-1 font-semibold">
                 <span className="text-slate-400">New Available Balance:</span>
                 <span className="text-emerald-400 font-bold">
-                  {wallet.currency}
-                  {wallet.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {app.currency}
+                  {app.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
             </div>
@@ -886,14 +886,14 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
               }}
               className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-3 rounded-2xl text-xs font-bold transition"
             >
-              Send Money Again
+              Send Points Again
             </button>
 
             <button
               onClick={onBack}
               className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 py-3.5 rounded-2xl text-xs font-extrabold shadow-lg shadow-emerald-500/20 transition"
             >
-              Back to Wallet Dashboard
+              Back to App Dashboard
             </button>
           </div>
         </div>
@@ -903,7 +903,7 @@ export const SendMoneyView: React.FC<SendMoneyViewProps> = ({
       <BiometricModal
         isOpen={showBiometricModal}
         amount={parseFloat(amount) || 0}
-        currency={wallet.currency}
+        currency={app.currency}
         recipientName={selectedRecipient?.name || 'Recipient'}
         onSuccess={handleBiometricSuccess}
         onCancel={() => setShowBiometricModal(false)}

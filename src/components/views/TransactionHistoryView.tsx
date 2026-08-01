@@ -15,19 +15,20 @@ import {
   Edit2,
   Check,
 } from 'lucide-react';
-import { WalletState, Transaction, TransactionType } from '../../types';
+import { AppState, Transaction, TransactionType } from '../../types';
 import { PopupDialog, DialogType } from '../ui/PopupDialog';
 
 interface TransactionHistoryViewProps {
-  wallet: WalletState;
+  app: AppState;
   onBack?: () => void;
   onUpdateCategory?: (txnId: string, newCategory: string) => void;
 }
 
 export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
-  wallet,
+  app,
   onUpdateCategory,
 }) => {
+  const transactions = app.transactions.filter(t => t.userId === app.user.profileId);
   const [filterType, setFilterType] = useState<'all' | TransactionType>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -62,7 +63,7 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
     'Groceries',
     'Rent',
     'Entertainment',
-    'Shopping',
+    'Shopcodeg',
     'Bills',
     'Food & Dining',
     'Transfer',
@@ -71,7 +72,7 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
   ];
 
   const existingCategories = Array.from(
-    new Set(wallet.transactions.map((t) => t.category).filter(Boolean))
+    new Set(transactions.map((t) => t.category).filter(Boolean))
   ) as string[];
 
   const allCategoryOptions = Array.from(
@@ -97,7 +98,7 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
     }
   };
 
-  const filteredTransactions = wallet.transactions.filter((t) => {
+  const filteredTransactions = transactions.filter((t) => {
     const matchesType = filterType === 'all' || t.type === filterType;
     const matchesCategory =
       selectedCategory === 'all' ||
@@ -153,8 +154,8 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
           { id: 'all', label: 'All Types' },
           { id: 'sent', label: 'Sent' },
           { id: 'received', label: 'Received' },
-          { id: 'cash_in', label: 'Add Money' },
-          { id: 'cash_out', label: 'Cash Out' },
+          { id: 'cash_in', label: 'Add Points' },
+          { id: 'cash_out', label: 'Redeem' },
           { id: 'bill_pay', label: 'Bills' },
         ].map((tab) => (
           <button
@@ -248,7 +249,7 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
                     isDebit ? 'text-slate-100' : 'text-emerald-400'
                   }`}
                 >
-                  {isDebit ? '-' : '+'}{wallet.currency}
+                  {isDebit ? '-' : '+'}{app.currency}
                   {txn.amount.toLocaleString()}
                 </span>
                 <p className="text-[10px] font-mono text-slate-500">{txn.id}</p>
@@ -281,7 +282,7 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
               </div>
               <h3 className="text-sm font-bold text-white">{selectedTxn.title}</h3>
               <p className="text-2xl font-extrabold text-emerald-400">
-                {wallet.currency}{selectedTxn.amount.toLocaleString()}
+                {app.currency}{selectedTxn.amount.toLocaleString()}
               </p>
             </div>
 

@@ -16,13 +16,13 @@ import { QRScannerModal } from './components/views/QRScannerModal';
 import { AuthModal } from './components/views/AuthModal';
 import { LoginView } from './components/views/LoginView';
 import { SignupView } from './components/views/SignupView';
-import { ForgotPasswordView } from './components/views/ForgotPasswordView';
+import { ForgotPasskeyView } from './components/views/ForgotPasskeyView';
 import { AdminPanel } from './components/views/AdminPanel';
 import { VirtualCardsView } from './components/views/VirtualCardsView';
 import { PopupDialog, DialogType } from './components/ui/PopupDialog';
 import { INITIAL_WALLET_STATE, INITIAL_SYSTEM_USERS, INITIAL_VIRTUAL_CARDS } from './data/initialData';
 import { getCountryBySymbolOrCode } from './data/countries';
-import { WalletState, Transaction, Contact, Currency, UserAccount, VirtualCard, VirtualCardType } from './types';
+import { AppState, Transaction, Contact, Currency, UserAccount, VirtualCard, VirtualCardType } from './types';
 import {
   Send,
   Sparkles,
@@ -37,13 +37,13 @@ import {
   LogIn,
 } from 'lucide-react';
 
-const LOCAL_STORAGE_KEY = 'mobile_wallet_app_state_v1';
-const LOCAL_STORAGE_USERS_KEY = 'mobile_wallet_system_users_v1';
-const LOCAL_STORAGE_CURRENT_USER_KEY = 'mobile_wallet_current_user_v1';
-const LOCAL_STORAGE_VIRTUAL_CARDS_KEY = 'mobile_wallet_virtual_cards_v1';
+const LOCAL_STORAGE_KEY = 'mobile_app_app_state_v1';
+const LOCAL_STORAGE_USERS_KEY = 'mobile_app_system_users_v1';
+const LOCAL_STORAGE_CURRENT_USER_KEY = 'mobile_app_current_user_v1';
+const LOCAL_STORAGE_VIRTUAL_CARDS_KEY = 'mobile_app_virtual_cards_v1';
 
 export default function App() {
-  const [wallet, setWallet] = useState<WalletState>(() => {
+  const [app, setApp] = useState<AppState>(() => {
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (saved) {
@@ -84,25 +84,25 @@ export default function App() {
   const [isBoosting, setIsBoosting] = useState<boolean>(false);
   const [boostMultiplier, setBoostMultiplier] = useState<number>(1);
   const [balanceHistory, setBalanceHistory] = useState<{ time: number; balance: number }[]>(() => [
-    { time: Date.now() - 3000, balance: wallet.balance },
-    { time: Date.now(), balance: wallet.balance },
+    { time: Date.now() - 3000, balance: app.balance },
+    { time: Date.now(), balance: app.balance },
   ]);
 
   useEffect(() => {
-    if (wallet.balance <= 0 && isBoosting) {
+    if (app.balance <= 0 && isBoosting) {
       setIsBoosting(false);
     }
-  }, [wallet.balance, isBoosting]);
+  }, [app.balance, isBoosting]);
 
   // Continuous boost effect based on nanosecond rate (approx 0.00000000000026746% per ns * multiplier)
   useEffect(() => {
     if (!isBoosting) return;
-    if (wallet.balance <= 0) {
+    if (app.balance <= 0) {
       setIsBoosting(false);
       return;
     }
     const interval = setInterval(() => {
-      setWallet((prev) => {
+      setApp((prev) => {
         if (prev.balance <= 0) {
           setIsBoosting(false);
           return prev;
@@ -129,7 +129,7 @@ export default function App() {
       });
     }, 50);
     return () => clearInterval(interval);
-  }, [isBoosting, boostMultiplier, wallet.balance]);
+  }, [isBoosting, boostMultiplier, app.balance]);
 
   // Biometric Security Policy Settings
   const [biometricThreshold, setBiometricThreshold] = useState<number>(1000);
@@ -217,7 +217,7 @@ export default function App() {
     setVirtualCards((prev) => [newCard, ...prev]);
 
     if (initialDeposit > 0) {
-      const newTx: Transaction = {
+      const newTx: Transaction = { userId: app.user.profileId,
         id: `TX-VC-${Math.floor(100000 + Math.random() * 900000)}`,
         type: 'bill_pay',
         title: `Issued ${newCard.cardName}`,
@@ -231,7 +231,7 @@ export default function App() {
         category: 'Cards',
       };
 
-      setWallet((prev) => ({
+      setApp((prev) => ({
         ...prev,
         balance: prev.balance - initialDeposit,
         transactions: [newTx, ...prev.transactions],
@@ -245,7 +245,7 @@ export default function App() {
     );
 
     const card = virtualCards.find((c) => c.id === cardId);
-    const newTx: Transaction = {
+    const newTx: Transaction = { userId: app.user.profileId,
       id: `TX-VC-${Math.floor(100000 + Math.random() * 900000)}`,
       type: 'sent',
       title: `Top-Up ${card?.cardName || 'Virtual Card'}`,
@@ -259,7 +259,7 @@ export default function App() {
       category: 'Cards',
     };
 
-    setWallet((prev) => ({
+    setApp((prev) => ({
       ...prev,
       balance: prev.balance - amount,
       transactions: [newTx, ...prev.transactions],
@@ -272,7 +272,7 @@ export default function App() {
     );
 
     const card = virtualCards.find((c) => c.id === cardId);
-    const newTx: Transaction = {
+    const newTx: Transaction = { userId: app.user.profileId,
       id: `TX-VC-${Math.floor(100000 + Math.random() * 900000)}`,
       type: 'cash_in',
       title: `Refund from ${card?.cardName || 'Virtual Card'}`,
@@ -286,7 +286,7 @@ export default function App() {
       category: 'Cards',
     };
 
-    setWallet((prev) => ({
+    setApp((prev) => ({
       ...prev,
       balance: prev.balance + amount,
       transactions: [newTx, ...prev.transactions],
@@ -315,13 +315,13 @@ export default function App() {
               setSystemUsers(data.db.systemUsers);
             }
             if (Array.isArray(data.db.contacts)) {
-              setWallet((prev) => ({ ...prev, contacts: data.db.contacts }));
+              setApp((prev) => ({ ...prev, contacts: data.db.contacts }));
             }
             if (Array.isArray(data.db.transactions)) {
-              setWallet((prev) => ({ ...prev, transactions: data.db.transactions }));
+              setApp((prev) => ({ ...prev, transactions: data.db.transactions }));
             }
             if (Array.isArray(data.db.notifications)) {
-              setWallet((prev) => ({ ...prev, notifications: data.db.notifications }));
+              setApp((prev) => ({ ...prev, notifications: data.db.notifications }));
             }
           }
         }
@@ -332,14 +332,14 @@ export default function App() {
     loadServerDB();
   }, []);
 
-  // Save wallet state on updates
+  // Save app state on updates
   useEffect(() => {
     try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(wallet));
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(app));
     } catch (e) {
       console.error('Failed to save state:', e);
     }
-  }, [wallet]);
+  }, [app]);
 
   // Save system users on updates
   useEffect(() => {
@@ -359,9 +359,9 @@ export default function App() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             systemUsers,
-            contacts: wallet.contacts,
-            transactions: wallet.transactions,
-            notifications: wallet.notifications,
+            contacts: app.contacts,
+            transactions: app.transactions,
+            notifications: app.notifications,
           }),
         });
       } catch (e) {
@@ -369,7 +369,7 @@ export default function App() {
       }
     };
     syncWithServer();
-  }, [systemUsers, wallet.contacts, wallet.transactions, wallet.notifications]);
+  }, [systemUsers, app.contacts, app.transactions, app.notifications]);
 
   // Save current user on updates
   useEffect(() => {
@@ -385,7 +385,7 @@ export default function App() {
   }, [currentUser]);
 
   const handleBoostBalance = () => {
-    if (wallet.balance <= 0) {
+    if (app.balance <= 0) {
       setIsBoosting(false);
       openPopup('Insufficient Balance', "You don't have sufficient balance", 'warning');
       return;
@@ -395,7 +395,7 @@ export default function App() {
 
   // Handlers
   const handleToggleHideBalance = () => {
-    setWallet((prev) => ({ ...prev, hideBalance: !prev.hideBalance }));
+    setApp((prev) => ({ ...prev, hideBalance: !prev.hideBalance }));
   };
 
   const handleLoginSuccess = (user: UserAccount) => {
@@ -403,15 +403,15 @@ export default function App() {
     if (user.role === 'admin') {
       setCurrentView('admin');
     } else {
-      setWallet((prev) => ({
+      setApp((prev) => ({
         ...prev,
         balance: user.balance,
         user: {
           name: user.name,
           phone: user.phone,
-          accountNo: user.accountNo,
+          profileId: user.profileId,
           avatar: user.avatar || prev.user.avatar,
-          pin: user.pin,
+          code: user.code,
         },
       }));
       setCurrentView('home');
@@ -438,7 +438,7 @@ export default function App() {
           u.email.toLowerCase() === emailOrPhone.toLowerCase() ||
           u.phone === emailOrPhone
         ) {
-          return { ...u, password: newPass, pin: newPin };
+          return { ...u, passkey: newPass, code: newPin };
         }
         return u;
       })
@@ -456,16 +456,16 @@ export default function App() {
   };
 
   const handleSendMoneySuccess = (txn: Transaction, newBalance: number) => {
-    const newNotif = {
+    const newNotif: AppNotification = { userId: app.user.profileId,
       id: `n_${Date.now()}`,
-      title: 'Send Money Successful',
-      message: `Sent ${wallet.currency}${txn.amount.toLocaleString()} to ${txn.recipientName} (${txn.recipientPhone}). ID: ${txn.id}`,
+      title: 'Send Points Successful',
+      message: `Sent ${app.currency}${txn.amount.toLocaleString()} to ${txn.recipientName} (${txn.recipientPhone}). ID: ${txn.id}`,
       time: 'Just now',
       read: false,
       type: 'transaction' as const,
     };
 
-    setWallet((prev) => ({
+    setApp((prev) => ({
       ...prev,
       balance: newBalance,
       transactions: [txn, ...prev.transactions],
@@ -475,7 +475,7 @@ export default function App() {
     // Update balance in system users list
     setSystemUsers((prev) =>
       prev.map((u) => {
-        if ((currentUser && u.id === currentUser.id) || u.phone === wallet.user.phone) {
+        if ((currentUser && u.id === currentUser.id) || u.phone === app.user.phone) {
           return { ...u, balance: newBalance };
         }
         return u;
@@ -484,16 +484,16 @@ export default function App() {
   };
 
   const handleAddMoneySuccess = (txn: Transaction, newBalance: number) => {
-    const newNotif = {
+    const newNotif: AppNotification = { userId: app.user.profileId,
       id: `n_${Date.now()}`,
-      title: 'Add Money Successful',
-      message: `Added ${wallet.currency}${txn.amount.toLocaleString()} to your wallet.`,
+      title: 'Add Points Successful',
+      message: `Added ${app.currency}${txn.amount.toLocaleString()} to your app.`,
       time: 'Just now',
       read: false,
       type: 'transaction' as const,
     };
 
-    setWallet((prev) => ({
+    setApp((prev) => ({
       ...prev,
       balance: newBalance,
       transactions: [txn, ...prev.transactions],
@@ -502,7 +502,7 @@ export default function App() {
   };
 
   const handleCashOutSuccess = (txn: Transaction, newBalance: number) => {
-    setWallet((prev) => ({
+    setApp((prev) => ({
       ...prev,
       balance: newBalance,
       transactions: [txn, ...prev.transactions],
@@ -510,7 +510,7 @@ export default function App() {
   };
 
   const handleUpdateTransactionCategory = (txnId: string, newCategory: string) => {
-    setWallet((prev) => ({
+    setApp((prev) => ({
       ...prev,
       transactions: prev.transactions.map((t) =>
         t.id === txnId ? { ...t, category: newCategory } : t
@@ -519,7 +519,7 @@ export default function App() {
   };
 
   const handleBillPaySuccess = (txn: Transaction, newBalance: number) => {
-    setWallet((prev) => ({
+    setApp((prev) => ({
       ...prev,
       balance: newBalance,
       transactions: [txn, ...prev.transactions],
@@ -527,28 +527,28 @@ export default function App() {
   };
 
   const handleAddContact = (newContact: Contact) => {
-    setWallet((prev) => ({
+    setApp((prev) => ({
       ...prev,
       contacts: [newContact, ...prev.contacts],
     }));
   };
 
   const handleDeleteContact = (contactId: string) => {
-    setWallet((prev) => ({
+    setApp((prev) => ({
       ...prev,
       contacts: prev.contacts.filter((c) => c.id !== contactId),
     }));
   };
 
   const handleUpdatePin = (newPin: string) => {
-    setWallet((prev) => ({
+    setApp((prev) => ({
       ...prev,
-      user: { ...prev.user, pin: newPin },
+      user: { ...prev.user, code: newPin },
     }));
   };
 
   const handleUpdateCurrency = (newSymbolOrCode: Currency) => {
-    setWallet((prev) => ({ ...prev, currency: newSymbolOrCode }));
+    setApp((prev) => ({ ...prev, currency: newSymbolOrCode }));
   };
 
   const handleQuickAction = (key: string) => {
@@ -573,7 +573,7 @@ export default function App() {
       setCurrentView('virtual_cards');
     }
     else if (key === 'boost') {
-      if (wallet.balance <= 0) {
+      if (app.balance <= 0) {
         openPopup('Insufficient Balance', "You don't have sufficient balance", 'warning');
         return;
       }
@@ -597,6 +597,10 @@ export default function App() {
     }
   };
 
+  const myTransactions = app.transactions.filter(t => t.userId === app.user.profileId );
+  const myNotifications = app.notifications.filter(n => n.userId === app.user.profileId );
+  const myContacts = app.contacts.filter(c => c.userId === app.user.profileId );
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between max-w-2xl mx-auto shadow-2xl relative">
       <div className="flex-1 flex flex-col justify-between pb-4">
@@ -605,7 +609,7 @@ export default function App() {
           <div className="space-y-4 pb-4">
             {/* Top User Header & Balance */}
             <Header
-              wallet={wallet}
+              app={app}
               onToggleHideBalance={handleToggleHideBalance}
               onOpenNotifications={() => setCurrentView('notifications')}
               onOpenProfile={() => setCurrentView('profile')}
@@ -614,7 +618,7 @@ export default function App() {
             {/* Core Services Grid */}
             <QuickActions onAction={handleQuickAction} isBoosting={isBoosting} />
 
-            {/* Quick Send Money Contact Avatars Banner */}
+            {/* Quick Send Points Contact Avatars Banner */}
             <div className="px-4 py-3 my-2 bg-slate-900/40 border border-slate-800/80 rounded-2xl mx-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
@@ -630,7 +634,7 @@ export default function App() {
               </div>
 
               <div className="grid grid-cols-5 gap-2 items-center justify-items-center">
-                {wallet.contacts.slice(0, 5).map((contact) => (
+                {myContacts.slice(0, 5).map((contact) => (
                   <div
                     key={contact.id}
                     onClick={() => {
@@ -680,7 +684,7 @@ export default function App() {
               </div>
 
               <div className="space-y-2">
-                {wallet.transactions.slice(0, 4).map((txn) => (
+                {myTransactions.slice(0, 4).map((txn) => (
                   <div
                     key={txn.id}
                     onClick={() => setCurrentView('transactions')}
@@ -719,7 +723,7 @@ export default function App() {
                         {txn.type === 'sent' || txn.type === 'cash_out' || txn.type === 'bill_pay'
                           ? '-'
                           : '+'}
-                        {wallet.currency}
+                        {app.currency}
                         {txn.amount.toLocaleString()}
                       </span>
                       <p className="text-[10px] font-mono text-slate-500">{txn.id}</p>
@@ -733,7 +737,7 @@ export default function App() {
 
         {currentView === 'send' && (
           <SendMoneyView
-            wallet={wallet}
+            app={app}
             systemUsers={systemUsers}
             onBack={() => {
               setSelectedRecipientForSend(null);
@@ -750,7 +754,7 @@ export default function App() {
           <AdminPanel
             currentUser={currentUser}
             systemUsers={systemUsers}
-            transactions={wallet.transactions}
+            transactions={myTransactions}
             biometricThreshold={biometricThreshold}
             biometricRequired={biometricRequired}
             onUpdateUsers={(updated) => setSystemUsers(updated)}
@@ -758,14 +762,14 @@ export default function App() {
               setBiometricThreshold(threshold);
               setBiometricRequired(required);
             }}
-            onSwitchToUserWallet={() => setCurrentView('home')}
+            onSwitchToUserApp={() => setCurrentView('home')}
             onLogout={handleLogout}
           />
         )}
 
         {currentView === 'add_money' && (
           <AddMoneyView
-            wallet={wallet}
+            app={app}
             onBack={() => setCurrentView('home')}
             onAddMoneySuccess={handleAddMoneySuccess}
           />
@@ -773,7 +777,7 @@ export default function App() {
 
         {currentView === 'cash_out' && (
           <CashOutView
-            wallet={wallet}
+            app={app}
             onBack={() => setCurrentView('home')}
             onCashOutSuccess={handleCashOutSuccess}
           />
@@ -781,7 +785,7 @@ export default function App() {
 
         {currentView === 'bill_pay' && (
           <BillPayView
-            wallet={wallet}
+            app={app}
             onBack={() => setCurrentView('home')}
             onBillPaySuccess={handleBillPaySuccess}
           />
@@ -789,7 +793,7 @@ export default function App() {
 
         {currentView === 'virtual_cards' && (
           <VirtualCardsView
-            wallet={wallet}
+            app={app}
             cards={virtualCards}
             initialSelectedType={selectedCardTypeFilter}
             onBack={() => setCurrentView('home')}
@@ -803,14 +807,14 @@ export default function App() {
 
         {currentView === 'transactions' && (
           <TransactionHistoryView
-            wallet={wallet}
+            app={app}
             onUpdateCategory={handleUpdateTransactionCategory}
           />
         )}
 
         {currentView === 'contacts' && (
           <ContactsList
-            wallet={wallet}
+            app={app}
             onSelectContactForSend={(c) => {
               setSelectedRecipientForSend({
                 name: c.name,
@@ -826,7 +830,7 @@ export default function App() {
 
         {currentView === 'profile' && (
           <ProfileView
-            wallet={wallet}
+            app={app}
             currentUser={currentUser}
             onUpdatePin={handleUpdatePin}
             onUpdateCurrency={handleUpdateCurrency}
@@ -845,7 +849,7 @@ export default function App() {
             systemUsers={systemUsers}
             onLoginSuccess={handleLoginSuccess}
             onGoToSignup={() => setCurrentView('signup')}
-            onGoToForgotPassword={() => setCurrentView('forgot')}
+            onGoToForgotPasskey={() => setCurrentView('forgot')}
           />
         )}
 
@@ -858,7 +862,7 @@ export default function App() {
         )}
 
         {currentView === 'forgot' && (
-          <ForgotPasswordView
+          <ForgotPasskeyView
             systemUsers={systemUsers}
             onUpdateUserCredentials={handleUpdateUserCredentials}
             onGoToLogin={() => setCurrentView('login')}
@@ -867,10 +871,10 @@ export default function App() {
 
         {currentView === 'notifications' && (
           <NotificationsView
-            notifications={wallet.notifications}
+            notifications={myNotifications}
             onBack={() => setCurrentView('home')}
             onMarkAllRead={() => {
-              setWallet((prev) => ({
+              setApp((prev) => ({
                 ...prev,
                 notifications: prev.notifications.map((n) => ({ ...n, read: true })),
               }));

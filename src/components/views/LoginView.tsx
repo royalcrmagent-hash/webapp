@@ -17,7 +17,7 @@ interface LoginViewProps {
   systemUsers: UserAccount[];
   onLoginSuccess: (user: UserAccount) => void;
   onGoToSignup: () => void;
-  onGoToForgotPassword: () => void;
+  onGoToForgotPasskey: () => void;
   onClose?: () => void;
 }
 
@@ -25,12 +25,12 @@ export const LoginView: React.FC<LoginViewProps> = ({
   systemUsers,
   onLoginSuccess,
   onGoToSignup,
-  onGoToForgotPassword,
+  onGoToForgotPasskey,
   onClose,
 }) => {
   const [identifier, setIdentifier] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [passkey, setPasskey] = useState('');
+  const [showPasskey, setShowPasskey] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
   // Custom Popup Dialog State
@@ -53,88 +53,36 @@ export const LoginView: React.FC<LoginViewProps> = ({
     setDialogState((prev) => ({ ...prev, isOpen: false }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    setTimeout(() => {
-      const target = identifier.trim().toLowerCase();
-      const targetCleanDigits = identifier.replace(/\D/g, '');
-
-      let user: UserAccount | undefined;
-
-      // CASE A: Identifier is provided
-      if (target) {
-        user = systemUsers.find((u) => {
-          const emailMatch = u.email.toLowerCase() === target;
-
-          const phoneDigits = u.phone.replace(/\D/g, '');
-          const phoneMatch =
-            (targetCleanDigits.length > 2 && phoneDigits.includes(targetCleanDigits)) ||
-            u.phone.toLowerCase() === target ||
-            u.phone.replaceAll(' ', '') === target;
-
-          const accMatch = u.accountNo.toLowerCase() === target;
-
-          const nameMatch =
-            u.name.toLowerCase() === target ||
-            u.name.replaceAll(' ', '').toLowerCase() === target;
-
-          const usernameMatch = (u as any).username?.toLowerCase() === target;
-
-          return emailMatch || phoneMatch || accMatch || nameMatch || usernameMatch;
-        });
-
-        if (!user) {
-          openPopup('Login Failed', 'Account not found. Please check your Username, Email, Phone, or Account Number.');
-          setIsLoading(false);
-          return;
-        }
-
-        if (user.isFrozen) {
-          openPopup('Account Frozen', 'This account has been frozen by the System Admin. Please contact support.', 'warning');
-          setIsLoading(false);
-          return;
-        }
-
-        // Require password
-        if (!password.trim()) {
-          openPopup('Password Required', 'Please enter your account password.', 'warning');
-          setIsLoading(false);
-          return;
-        }
-
-        const matchPassword = user.password && user.password === password.trim();
-        if (!matchPassword) {
-          openPopup('Login Failed', 'Invalid account password.');
-          setIsLoading(false);
-          return;
-        }
-      } else if (password.trim()) {
-        // CASE B: ONLY Password provided (Identifier is empty)
-        const inputPass = password.trim();
-        user = systemUsers.find((u) => u.password && u.password === inputPass);
-
-        if (!user) {
-          openPopup('Login Failed', 'No account found matching this password.');
-          setIsLoading(false);
-          return;
-        }
-
-        if (user.isFrozen) {
-          openPopup('Account Frozen', 'This account has been frozen by the System Admin. Please contact support.', 'warning');
-          setIsLoading(false);
-          return;
-        }
-      } else {
-        openPopup('Input Required', 'Please enter your Username, Email, Phone, Account Number, or Password.', 'warning');
+    try {
+      const target = identifier.trim() || passkey.trim();
+      if (!target) {
+        openPopup('Input Required', 'Please enter your Username, Email, Phone, Profile ID, or Passkey.', 'warning');
         setIsLoading(false);
         return;
       }
-
+      
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emailOrPhone: target, passkey: passkey })
+      });
+      const data = await response.json();
+      
+      if (data.success && data.user) {
+        onLoginSuccess(data.user);
+      } else {
+        openPopup('Login Failed', data.error || 'Invalid credentials.');
+      }
+    } catch (err) {
+      console.error(err);
+      openPopup('Login Error', 'An error occurred while communicating with the authentication server.');
+    } finally {
       setIsLoading(false);
-      onLoginSuccess(user);
-    }, 400);
+    }
   };
 
   return (
@@ -146,9 +94,9 @@ export const LoginView: React.FC<LoginViewProps> = ({
             <Sparkles className="w-5 h-5 text-emerald-400" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-slate-950 tracking-tight">PayPulse</h1>
+            <h1 className="text-base font-bold text-slate-950 tracking-tight">PulseTracker</h1>
             <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-widest">
-              Digital Wallet
+              Digital App
             </span>
           </div>
         </div>
@@ -169,7 +117,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
         <div className="space-y-1">
           <h2 className="text-3xl font-extrabold text-slate-950 tracking-tight">Welcome back.</h2>
           <p className="text-sm text-slate-500">
-            Sign in to access your secure wallet.
+            Sign in to access your secure app.
           </p>
         </div>
 
@@ -181,28 +129,28 @@ export const LoginView: React.FC<LoginViewProps> = ({
               <label className="text-xs font-bold text-slate-900 uppercase tracking-wider block">
                 Username / Email / Mobile / Acc#
               </label>
-              <span className="text-[10px] text-slate-500 font-medium">Optional if password used</span>
+              <span className="text-[10px] text-slate-500 font-medium">Optional if passkey used</span>
             </div>
             <div className="relative">
               <input
                 type="text"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                placeholder="Username, Email, Number, or Account No"
+                placeholder="Username, Email, Number, or Profile ID"
                 className="w-full bg-slate-50 border border-slate-200 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 text-slate-950 rounded-2xl px-5 py-4 text-sm placeholder-slate-400 transition outline-none"
               />
             </div>
           </div>
 
-          {/* Password Input */}
+          {/* Passkey Input */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                Password
+                Passkey
               </label>
               <button
                 type="button"
-                onClick={onGoToForgotPassword}
+                onClick={onGoToForgotPasskey}
                 className="text-xs text-slate-500 hover:text-slate-900 font-semibold transition"
               >
                 Forgot?
@@ -210,25 +158,25 @@ export const LoginView: React.FC<LoginViewProps> = ({
             </div>
             <div className="relative">
               <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter account password"
+                type={showPasskey ? 'text' : 'passkey'}
+                value={passkey}
+                onChange={(e) => setPasskey(e.target.value)}
+                placeholder="Enter account passkey"
                 className="w-full bg-slate-50 border border-slate-200 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 text-slate-950 rounded-2xl px-5 py-4 text-sm placeholder-slate-400 transition outline-none font-mono"
               />
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
+                onClick={() => setShowPasskey(!showPasskey)}
                 className="absolute inset-y-0 right-0 pr-5 flex items-center text-slate-400 hover:text-slate-900"
               >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showPasskey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </div>
 
           <div className="bg-slate-100 p-3 rounded-2xl border border-slate-200/80 text-[11px] text-slate-600 flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>Login using your registered account <strong>Password</strong>.</span>
+            <span>Login using your registered account <strong>Passkey</strong>.</span>
           </div>
 
           {/* Submit Button */}
@@ -239,7 +187,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
           >
             {isLoading ? (
               <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></span>
+                <span className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-scode"></span>
                 <span>Signing In...</span>
               </span>
             ) : (

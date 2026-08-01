@@ -38,7 +38,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
 
         <div className="flex items-center justify-center gap-1.5 text-emerald-400">
           <QrCode className="w-5 h-5" />
-          <h3 className="text-sm font-bold text-white">Scan Wallet QR Code</h3>
+          <h3 className="text-sm font-bold text-white">Scan App QR Code</h3>
         </div>
 
         {/* Animated Camera Scanner Frame */}

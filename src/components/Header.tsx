@@ -1,25 +1,25 @@
 import React from 'react';
 import { Bell, Eye, EyeOff, ShieldCheck, Award } from 'lucide-react';
-import { WalletState } from '../types';
+import { AppState } from '../types';
 import { getCountryBySymbolOrCode, ALL_COUNTRIES } from '../data/countries';
 
 interface HeaderProps {
-  wallet: WalletState;
+  app: AppState;
   onToggleHideBalance: () => void;
   onOpenNotifications: () => void;
   onOpenProfile: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  wallet,
+  app,
   onToggleHideBalance,
   onOpenNotifications,
   onOpenProfile,
 }) => {
-  const unreadCount = wallet.notifications.filter((n) => !n.read).length;
-  const currentCountry = getCountryBySymbolOrCode(wallet.currency) || ALL_COUNTRIES[0];
+  const unreadCount = app.notifications.filter((n) => (n.userId === app.user.profileId) && !n.read).length;
+  const currentCountry = getCountryBySymbolOrCode(app.currency) || ALL_COUNTRIES[0];
   const rateToUSD = currentCountry.rateToUSD || 1;
-  const displayBalance = wallet.balance;
+  const displayBalance = app.balance;
 
   return (
     <div className="space-y-3.5 px-4 pt-3 pb-1">
@@ -31,8 +31,8 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <div className="relative">
             <img
-              src={wallet.user.avatar}
-              alt={wallet.user.name}
+              src={app.user.avatar}
+              alt={app.user.name}
               className="w-10 h-10 rounded-xl object-cover ring-2 ring-emerald-500/30 group-hover:ring-emerald-400 transition shadow-md"
             />
             <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-slate-950 rounded-full flex items-center justify-center">
@@ -42,11 +42,11 @@ export const Header: React.FC<HeaderProps> = ({
           <div>
             <div className="flex items-center gap-1.5">
               <h3 className="text-xs font-bold text-white group-hover:text-emerald-400 transition tracking-tight">
-                {wallet.user.name}
+                {app.user.name}
               </h3>
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
             </div>
-            <p className="text-[10px] text-slate-400 font-mono tracking-tighter">{wallet.user.phone}</p>
+            <p className="text-[10px] text-slate-400 font-mono tracking-tighter">{app.user.phone}</p>
           </div>
         </div>
 
@@ -93,7 +93,7 @@ export const Header: React.FC<HeaderProps> = ({
               Primary Account
             </span>
             <span className="bg-emerald-900/80 border border-emerald-400/40 px-2.5 py-1 rounded-lg text-[10px] text-emerald-200 font-mono tracking-widest shadow-inner">
-              {wallet.user.accountNo}
+              {app.user.profileId}
             </span>
           </div>
 
@@ -104,10 +104,10 @@ export const Header: React.FC<HeaderProps> = ({
               </p>
               <div className="flex items-center gap-2.5">
                 <span className="text-3xl sm:text-4xl font-extrabold tracking-tight drop-shadow-sm">
-                  {wallet.hideBalance ? (
+                  {app.hideBalance ? (
                     <span className="tracking-widest text-slate-300">••••••••</span>
                   ) : (
-                    `${wallet.currency}${displayBalance.toLocaleString('en-US', {
+                    `${app.currency}${displayBalance.toLocaleString('en-US', {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}`
@@ -116,9 +116,9 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   onClick={onToggleHideBalance}
                   className="p-1.5 rounded-xl bg-black/20 hover:bg-black/40 text-emerald-200 transition active:scale-95"
-                  title={wallet.hideBalance ? 'Show Balance' : 'Hide Balance'}
+                  title={app.hideBalance ? 'Show Balance' : 'Hide Balance'}
                 >
-                  {wallet.hideBalance ? (
+                  {app.hideBalance ? (
                     <EyeOff className="w-4 h-4" />
                   ) : (
                     <Eye className="w-4 h-4" />
@@ -131,9 +131,9 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="text-xs">{currentCountry.flag}</span>
                 <span className="font-bold">Rate:</span>
                 <span>1 USD = {currentCountry.symbol}{currentCountry.rateToUSD} {currentCountry.code}</span>
-                {currentCountry.code !== 'USD' && !wallet.hideBalance && (
+                {currentCountry.code !== 'USD' && !app.hideBalance && (
                   <span className="text-emerald-300 border-l border-white/20 pl-1.5 font-sans font-semibold">
-                    (Base: ${(wallet.balance / rateToUSD).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD)
+                    (Base: ${(app.balance / rateToUSD).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD)
                   </span>
                 )}
               </div>

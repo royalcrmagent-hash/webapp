@@ -22,9 +22,9 @@ const INITIAL_DB = {
       name: 'System Admin',
       email: 'admin@gmail.com',
       phone: '01700000000',
-      accountNo: 'ADM-0000-999',
-      pin: '1234',
-      password: '123456',
+      profileId: 'ADM-0000-999',
+      code: '1234',
+      passkey: '123456',
       role: 'admin',
       balance: 100000,
       avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=250',
@@ -196,7 +196,7 @@ async function startServer() {
 
   // User Login
   app.post('/api/auth/login', async (req, res) => {
-    const { emailOrPhone, password, pin } = req.body;
+    const { emailOrPhone, passkey, code } = req.body;
     if (!emailOrPhone) {
       return res.status(400).json({ success: false, error: 'Email or phone required' });
     }
@@ -208,7 +208,7 @@ async function startServer() {
     const user = db.systemUsers.find((u: any) => {
       const uEmail = u.email ? u.email.trim().toLowerCase() : '';
       const uPhoneDigits = u.phone ? u.phone.replace(/\D/g, '') : '';
-      const uAcc = u.accountNo ? u.accountNo.toLowerCase() : '';
+      const uAcc = u.profileId ? u.profileId.toLowerCase() : '';
       return uEmail === target || uPhoneDigits === cleanDigits || uAcc === target;
     });
 
@@ -220,18 +220,18 @@ async function startServer() {
       return res.status(403).json({ success: false, error: 'Account is frozen by Admin. Contact support.' });
     }
 
-    if (password && user.password && user.password !== password) {
-      return res.status(401).json({ success: false, error: 'Incorrect Password.' });
+    if (passkey && user.passkey && user.passkey !== passkey) {
+      return res.status(401).json({ success: false, error: 'Incorrect Passkey.' });
     }
 
-    if (pin && user.pin && user.pin !== pin) {
-      return res.status(401).json({ success: false, error: 'Incorrect Security PIN.' });
+    if (code && user.code && user.code !== code) {
+      return res.status(401).json({ success: false, error: 'Incorrect Security Code.' });
     }
 
     res.json({ success: true, user });
   });
 
-  // Update Credentials (PIN / Password reset)
+  // Update Credentials (Code / Passkey reset)
   app.post('/api/auth/update-credentials', async (req, res) => {
     const { emailOrPhone, newPass, newPin } = req.body;
     const db = await readDB();
@@ -242,13 +242,13 @@ async function startServer() {
     db.systemUsers = db.systemUsers.map((u: any) => {
       const uEmail = u.email ? u.email.trim().toLowerCase() : '';
       const uPhoneDigits = u.phone ? u.phone.replace(/\D/g, '') : '';
-      const uAcc = u.accountNo ? u.accountNo.toLowerCase() : '';
+      const uAcc = u.profileId ? u.profileId.toLowerCase() : '';
       if (uEmail === target || uPhoneDigits === cleanDigits || uAcc === target) {
         found = true;
         return {
           ...u,
-          password: newPass ? newPass.trim() : u.password,
-          pin: newPin ? newPin.trim() : u.pin,
+          passkey: newPass ? newPass.trim() : u.passkey,
+          code: newPin ? newPin.trim() : u.code,
         };
       }
       return u;

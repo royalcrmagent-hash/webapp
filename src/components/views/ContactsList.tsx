@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import { Search, UserPlus, Send, Sparkles, Phone, Trash2 } from 'lucide-react';
-import { Contact, WalletState } from '../../types';
+import { Contact, AppState } from '../../types';
 import { PopupDialog, DialogType } from '../ui/PopupDialog';
 
 interface ContactsListProps {
-  wallet: WalletState;
+  app: AppState;
   onSelectContactForSend: (contact: Contact) => void;
   onAddContact: (contact: Contact) => void;
   onDeleteContact?: (contactId: string) => void;
 }
 
 export const ContactsList: React.FC<ContactsListProps> = ({
-  wallet,
+  app,
   onSelectContactForSend,
   onAddContact,
   onDeleteContact,
@@ -59,7 +59,7 @@ export const ContactsList: React.FC<ContactsListProps> = ({
     setDialogState((prev) => ({ ...prev, isOpen: false }));
   };
 
-  const filtered = wallet.contacts.filter(
+  const filtered = app.contacts.filter(c => c.userId === app.user.profileId).filter(
     (c) =>
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.phone.includes(search)
@@ -71,7 +71,7 @@ export const ContactsList: React.FC<ContactsListProps> = ({
       return;
     }
     const newC: Contact = {
-      id: `c_${Date.now()}`,
+      id: `c_${Date.now()}`, userId: app.user.profileId,
       name: newName.trim(),
       phone: newPhone.trim(),
       avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(newName.trim())}&background=10b981&color=020617&font-size=0.45&bold=true`,
@@ -86,7 +86,7 @@ export const ContactsList: React.FC<ContactsListProps> = ({
   return (
     <div className="flex-1 flex flex-col bg-slate-950 text-slate-100 p-4">
       <div className="flex items-center justify-between pb-3 border-b border-slate-900 mb-3">
-        <h2 className="text-base font-bold text-white">Wallet Contacts</h2>
+        <h2 className="text-base font-bold text-white">App Contacts</h2>
         <button
           onClick={() => setShowAddModal(true)}
           className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition"

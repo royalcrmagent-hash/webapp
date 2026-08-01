@@ -4,6 +4,7 @@ export type VirtualCardType = 'visa' | 'mastercard' | 'amex';
 
 export interface VirtualCard {
   id: string;
+  userId?: string;
   type: VirtualCardType;
   cardName: string;
   cardNumber: string;
@@ -20,6 +21,7 @@ export type TransactionType = 'sent' | 'received' | 'cash_in' | 'cash_out' | 'bi
 
 export interface Transaction {
   id: string;
+  userId?: string;
   type: TransactionType;
   title: string;
   recipientName: string;
@@ -35,6 +37,7 @@ export interface Transaction {
 
 export interface Contact {
   id: string;
+  userId?: string;
   name: string;
   phone: string;
   username?: string;
@@ -45,6 +48,7 @@ export interface Contact {
 
 export interface AppNotification {
   id: string;
+  userId?: string;
   title: string;
   message: string;
   time: string;
@@ -55,19 +59,20 @@ export interface AppNotification {
 export interface UserProfile {
   name: string;
   phone: string;
-  accountNo: string;
+  profileId: string;
   avatar: string;
-  pin: string;
+  code: string;
 }
 
 export interface UserAccount {
   id: string;
+  userId?: string;
   name: string;
   email: string;
   phone: string;
-  accountNo: string;
-  pin: string;
-  password?: string;
+  profileId: string;
+  code: string;
+  passkey?: string;
   role: 'user' | 'admin';
   balance: number;
   isFrozen?: boolean;
@@ -84,7 +89,7 @@ export interface AuthState {
   biometricRequired: boolean;
 }
 
-export interface WalletState {
+export interface AppState {
   balance: number;
   currency: Currency;
   hideBalance: boolean;

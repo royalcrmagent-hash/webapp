@@ -1,4 +1,4 @@
-import { WalletState, UserAccount, VirtualCard } from '../types';
+import { AppState, UserAccount, VirtualCard } from '../types';
 
 export const INITIAL_VIRTUAL_CARDS: VirtualCard[] = [
   {
@@ -48,9 +48,9 @@ export const INITIAL_SYSTEM_USERS: UserAccount[] = [
     name: 'System Admin',
     email: 'admin@gmail.com',
     phone: '01700000000',
-    accountNo: 'ADM-0000-999',
-    pin: '1234',
-    password: '123456',
+    profileId: 'ADM-0000-999',
+    code: '1234',
+    passkey: '123456',
     role: 'admin',
     balance: 0,
     avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=250',
@@ -58,16 +58,16 @@ export const INITIAL_SYSTEM_USERS: UserAccount[] = [
   },
 ];
 
-export const INITIAL_WALLET_STATE: WalletState = {
+export const INITIAL_WALLET_STATE: AppState = {
   balance: 0.0,
   currency: '$',
   hideBalance: false,
   user: {
     name: 'Account Holder',
     phone: '01700000000',
-    accountNo: 'WAL-1000-001',
+    profileId: 'WAL-1000-001',
     avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=250',
-    pin: '1234',
+    code: '1234',
   },
   contacts: [
     {
@@ -120,8 +120,8 @@ export const INITIAL_WALLET_STATE: WalletState = {
   notifications: [
     {
       id: 'n1',
-      title: 'Welcome to Wallet',
-      message: 'Your real account is now active. You can Add Money or receive funds to begin.',
+      title: 'Welcome to App',
+      message: 'Your real account is now active. You can Add Points or receive funds to begin.',
       time: 'Just now',
       read: false,
       type: 'system',

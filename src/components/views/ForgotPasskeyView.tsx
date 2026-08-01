@@ -14,14 +14,14 @@ import {
   X,
 } from 'lucide-react';
 
-interface ForgotPasswordViewProps {
+interface ForgotPasskeyViewProps {
   systemUsers: UserAccount[];
   onUpdateUserCredentials: (emailOrPhone: string, newPass: string, newPin: string) => void;
   onGoToLogin: () => void;
   onClose?: () => void;
 }
 
-export const ForgotPasswordView: React.FC<ForgotPasswordViewProps> = ({
+export const ForgotPasskeyView: React.FC<ForgotPasskeyViewProps> = ({
   systemUsers,
   onUpdateUserCredentials,
   onGoToLogin,
@@ -31,7 +31,7 @@ export const ForgotPasswordView: React.FC<ForgotPasswordViewProps> = ({
   const [identifier, setIdentifier] = useState('');
   const [otpInput, setOtpInput] = useState('');
   const [generatedOtp, setGeneratedOtp] = useState('');
-  const [newPassword, setNewPassword] = useState('');
+  const [newPasskey, setNewPasskey] = useState('');
   const [newPin, setNewPin] = useState('');
   const [error, setError] = useState('');
   const [foundUser, setFoundUser] = useState<UserAccount | null>(null);
@@ -50,7 +50,7 @@ export const ForgotPasswordView: React.FC<ForgotPasswordViewProps> = ({
         (targetCleanDigits.length > 2 && phoneDigits.includes(targetCleanDigits)) ||
         u.phone.toLowerCase() === target ||
         u.phone.replaceAll(' ', '') === target;
-      const accMatch = u.accountNo.toLowerCase() === target;
+      const accMatch = u.profileId.toLowerCase() === target;
       const nameMatch =
         u.name.toLowerCase() === target ||
         u.name.replaceAll(' ', '').toLowerCase() === target;
@@ -60,7 +60,7 @@ export const ForgotPasswordView: React.FC<ForgotPasswordViewProps> = ({
     });
 
     if (!user) {
-      setError('Account not found with this Username, Email, Phone, or Account Number.');
+      setError('Account not found with this Username, Email, Phone, or Profile ID.');
       return;
     }
 
@@ -83,18 +83,18 @@ export const ForgotPasswordView: React.FC<ForgotPasswordViewProps> = ({
     setStep('reset');
   };
 
-  // Step 3: Reset Password & PIN
+  // Step 3: Reset Passkey & Code
   const handleResetSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     if (newPin.length !== 4 || !/^\d{4}$/.exec(newPin)) {
-      setError('Security PIN must be exactly 4 numeric digits.');
+      setError('Security Code must be exactly 4 numeric digits.');
       return;
     }
 
     if (foundUser) {
-      onUpdateUserCredentials(foundUser.email, newPassword, newPin);
+      onUpdateUserCredentials(foundUser.email, newPasskey, newPin);
       setStep('success');
     }
   };
@@ -129,9 +129,9 @@ export const ForgotPasswordView: React.FC<ForgotPasswordViewProps> = ({
         <div className="text-center space-y-1">
           <h2 className="text-2xl font-black text-white tracking-tight">Recover Credentials</h2>
           <p className="text-xs text-slate-400">
-            {step === 'request' && 'Enter your registered Email or Mobile number to reset PIN'}
+            {step === 'request' && 'Enter your registered Email or Mobile number to reset Code'}
             {step === 'verify' && 'Enter 6-digit SMS / Email security verification code'}
-            {step === 'reset' && 'Create your new password and 4-digit security PIN'}
+            {step === 'reset' && 'Create your new passkey and 4-digit security Code'}
             {step === 'success' && 'Your account security credentials have been updated'}
           </p>
         </div>
@@ -148,7 +148,7 @@ export const ForgotPasswordView: React.FC<ForgotPasswordViewProps> = ({
           <form onSubmit={handleRequestOtp} className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-300 block">
-                Username, Email, Phone, or Account Number
+                Username, Email, Phone, or Profile ID
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -224,18 +224,18 @@ export const ForgotPasswordView: React.FC<ForgotPasswordViewProps> = ({
           <form onSubmit={handleResetSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-300 block">
-                New Account Password
+                New Account Passkey
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <Lock className="w-4 h-4" />
                 </div>
                 <input
-                  type="password"
+                  type="passkey"
                   required
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Enter new password"
+                  value={newPasskey}
+                  onChange={(e) => setNewPasskey(e.target.value)}
+                  placeholder="Enter new passkey"
                   className="w-full bg-slate-900 border border-slate-800 focus:border-emerald-500 text-white rounded-2xl pl-10 pr-4 py-3 text-sm placeholder-slate-500 outline-none"
                 />
               </div>
@@ -243,14 +243,14 @@ export const ForgotPasswordView: React.FC<ForgotPasswordViewProps> = ({
 
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-300 block">
-                New 4-Digit Security PIN
+                New 4-Digit Security Code
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <KeyRound className="w-4 h-4" />
                 </div>
                 <input
-                  type="password"
+                  type="passkey"
                   maxLength={4}
                   required
                   value={newPin}
@@ -278,7 +278,7 @@ export const ForgotPasswordView: React.FC<ForgotPasswordViewProps> = ({
               <CheckCircle2 className="w-10 h-10 animate-bounce" />
             </div>
             <div className="space-y-1">
-              <h3 className="text-xl font-black text-white">Password & PIN Updated!</h3>
+              <h3 className="text-xl font-black text-white">Passkey & Code Updated!</h3>
               <p className="text-xs text-slate-300">
                 You can now log in using your updated security credentials.
               </p>
@@ -297,7 +297,7 @@ export const ForgotPasswordView: React.FC<ForgotPasswordViewProps> = ({
       {/* Security Footer */}
       <div className="mt-auto pt-6 text-center text-[10px] text-slate-500 flex items-center justify-center gap-1.5 z-10">
         <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-        <span>Secure Identity Verification Powered by PayPulse</span>
+        <span>Secure Identity Verification Powered by PulseTracker</span>
       </div>
     </div>
   );

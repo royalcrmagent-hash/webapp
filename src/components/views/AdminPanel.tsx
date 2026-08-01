@@ -30,8 +30,10 @@ interface AdminPanelProps {
   transactions: Transaction[];
   biometricThreshold: number;
   biometricRequired: boolean;
+  recaptchaEnabled: boolean;
   onUpdateUsers: (users: UserAccount[]) => void;
   onUpdateBiometricSettings: (threshold: number, required: boolean) => void;
+  onUpdateRecaptchaSettings: (enabled: boolean) => void;
   onSwitchToUserApp: () => void;
   onLogout: () => void;
 }
@@ -42,8 +44,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   transactions,
   biometricThreshold,
   biometricRequired,
+  recaptchaEnabled,
   onUpdateUsers,
   onUpdateBiometricSettings,
+  onUpdateRecaptchaSettings,
   onSwitchToUserApp,
   onLogout,
 }) => {
@@ -463,6 +467,40 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 <div
                   className={`w-4 h-4 bg-white rounded-full transition transform ${
                     biometricRequired ? 'translate-x-6' : 'translate-x-0'
+                  }`}
+                ></div>
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center border border-indigo-500/30">
+                <ShieldAlert className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-xs font-bold text-white">Google reCAPTCHA Protection</h3>
+                <p className="text-[11px] text-slate-400">
+                  Enable anti-bot verification for Login and Registration flows
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-800 flex items-center justify-between">
+              <div>
+                <h4 className="text-xs font-bold text-white">Enable reCAPTCHA</h4>
+                <p className="text-[11px] text-slate-400">Protect the system from automated attacks</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onUpdateRecaptchaSettings(!recaptchaEnabled)}
+                className={`w-12 h-6 rounded-full p-1 transition ${
+                  recaptchaEnabled ? 'bg-purple-600' : 'bg-slate-800'
+                }`}
+              >
+                <div
+                  className={`w-4 h-4 bg-white rounded-full transition transform ${
+                    recaptchaEnabled ? 'translate-x-6' : 'translate-x-0'
                   }`}
                 ></div>
               </button>

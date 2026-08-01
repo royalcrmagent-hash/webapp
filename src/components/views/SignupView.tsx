@@ -45,7 +45,20 @@ export const SignupView: React.FC<SignupViewProps> = ({
   const [isSuccess, setIsSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const [settings, setSettings] = useState<{ recaptchaEnabled: boolean } | null>(null);
   const recaptchaRef = useRef<ReCAPTCHA>(null);
+
+  // Fetch settings on mount
+  React.useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setSettings(data.settings);
+        }
+      })
+      .catch(err => console.error('Failed to fetch settings:', err));
+  }, []);
 
   // Filter countries for modal search
   const filteredCountries = ALL_COUNTRIES.filter((c) => {
@@ -107,7 +120,7 @@ export const SignupView: React.FC<SignupViewProps> = ({
     }
 
     const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || import.meta.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
-    if (siteKey && !recaptchaToken) {
+    if (settings?.recaptchaEnabled && siteKey && !recaptchaToken) {
       setError('Please complete the reCAPTCHA verification.');
       return;
     }
@@ -399,7 +412,7 @@ export const SignupView: React.FC<SignupViewProps> = ({
                 </label>
               </div>
 
-              {siteKey && (
+              {siteKey && settings?.recaptchaEnabled && (
                 <div className="flex justify-center py-1">
                   <ReCAPTCHA
                     ref={recaptchaRef}

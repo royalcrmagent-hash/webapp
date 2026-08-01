@@ -134,6 +134,7 @@ export default function App() {
   // Biometric Security Policy Settings
   const [biometricThreshold, setBiometricThreshold] = useState<number>(1000);
   const [biometricRequired, setBiometricRequired] = useState<boolean>(true);
+  const [recaptchaEnabled, setRecaptchaEnabled] = useState<boolean>(false);
 
   // Auth Modal state
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
@@ -336,6 +337,9 @@ export default function App() {
             if (data.db.biometricRequired !== undefined) {
               setBiometricRequired(data.db.biometricRequired);
             }
+            if (data.db.settings?.recaptchaEnabled !== undefined) {
+              setRecaptchaEnabled(data.db.settings.recaptchaEnabled);
+            }
           }
         }
       } catch (err) {
@@ -377,7 +381,10 @@ export default function App() {
             notifications: app.notifications,
             virtualCards,
             biometricThreshold,
-            biometricRequired
+            biometricRequired,
+            settings: {
+              recaptchaEnabled
+            }
           }),
         });
       } catch (e) {
@@ -774,11 +781,13 @@ export default function App() {
             transactions={myTransactions}
             biometricThreshold={biometricThreshold}
             biometricRequired={biometricRequired}
+            recaptchaEnabled={recaptchaEnabled}
             onUpdateUsers={(updated) => setSystemUsers(updated)}
             onUpdateBiometricSettings={(threshold, required) => {
               setBiometricThreshold(threshold);
               setBiometricRequired(required);
             }}
+            onUpdateRecaptchaSettings={(enabled) => setRecaptchaEnabled(enabled)}
             onSwitchToUserApp={() => setCurrentView('home')}
             onLogout={handleLogout}
           />

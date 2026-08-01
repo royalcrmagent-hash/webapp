@@ -113,6 +113,9 @@ const INITIAL_DB = {
       userId: 'ADM-0000-999',
     },
   ],
+  settings: {
+    recaptchaEnabled: false,
+  },
 };
 
 // Database storage abstraction
@@ -217,7 +220,7 @@ async function startServer() {
 
   // Sync / Save full database state
   app.post('/api/db/sync', async (req, res) => {
-    const { systemUsers, contacts, transactions, notifications, virtualCards, biometricThreshold, biometricRequired } = req.body;
+    const { systemUsers, contacts, transactions, notifications, virtualCards, biometricThreshold, biometricRequired, settings } = req.body;
     const currentDB = await readDB();
     const updatedDB = {
       ...currentDB,
@@ -227,21 +230,38 @@ async function startServer() {
       notifications: notifications || currentDB.notifications,
       virtualCards: virtualCards || currentDB.virtualCards,
       biometricThreshold: biometricThreshold !== undefined ? biometricThreshold : currentDB.biometricThreshold,
-      biometricRequired: biometricRequired !== undefined ? biometricRequired : currentDB.biometricRequired
+      biometricRequired: biometricRequired !== undefined ? biometricRequired : currentDB.biometricRequired,
+      settings: settings || currentDB.settings
     };
     await writeDB(updatedDB);
     res.json({ success: true, message: 'Server database synchronized', db: updatedDB });
   });
 
+  // Settings Management
+  app.get('/api/settings', async (req, res) => {
+    const db = await readDB();
+    res.json({ success: true, settings: db.settings || INITIAL_DB.settings });
+  });
+
+  app.post('/api/settings', async (req, res) => {
+    const { settings } = req.body;
+    const db = await readDB();
+    db.settings = { ...(db.settings || INITIAL_DB.settings), ...settings };
+    await writeDB(db);
+    res.json({ success: true, settings: db.settings });
+  });
+
   // User Registration
   app.post('/api/users/register', async (req, res) => {
     const { recaptchaToken, ...newUser } = req.body;
+    const db = await readDB();
+    const settings = db.settings || INITIAL_DB.settings;
     
-    if (process.env.RECAPTCHA_SECRET_KEY && !recaptchaToken) {
+    if (settings.recaptchaEnabled && process.env.RECAPTCHA_SECRET_KEY && !recaptchaToken) {
       return res.status(400).json({ success: false, error: 'reCAPTCHA verification required' });
     }
 
-    if (recaptchaToken) {
+    if (settings.recaptchaEnabled && recaptchaToken) {
       const isValid = await verifyRecaptcha(recaptchaToken);
       if (!isValid) {
         return res.status(400).json({ success: false, error: 'reCAPTCHA verification failed' });
@@ -252,7 +272,6 @@ async function startServer() {
       return res.status(400).json({ success: false, error: 'Email and Phone are required' });
     }
 
-    const db = await readDB();
     const cleanPhoneDigits = newUser.phone.replace(/\D/g, '');
     const cleanEmail = newUser.email.trim().toLowerCase();
 
@@ -296,12 +315,14 @@ async function startServer() {
   // User Login
   app.post('/api/auth/login', async (req, res) => {
     const { emailOrPhone, passkey, code, recaptchaToken } = req.body;
+    const db = await readDB();
+    const settings = db.settings || INITIAL_DB.settings;
     
-    if (process.env.RECAPTCHA_SECRET_KEY && !recaptchaToken) {
+    if (settings.recaptchaEnabled && process.env.RECAPTCHA_SECRET_KEY && !recaptchaToken) {
       return res.status(400).json({ success: false, error: 'reCAPTCHA verification required' });
     }
 
-    if (recaptchaToken) {
+    if (settings.recaptchaEnabled && recaptchaToken) {
       const isValid = await verifyRecaptcha(recaptchaToken);
       if (!isValid) {
         return res.status(400).json({ success: false, error: 'reCAPTCHA verification failed' });
@@ -312,7 +333,6 @@ async function startServer() {
       return res.status(400).json({ success: false, error: 'Email or phone required' });
     }
 
-    const db = await readDB();
     const target = emailOrPhone.trim().toLowerCase().replaceAll(' ', '');
     const cleanDigits = target.replace(/\D/g, '');
 

@@ -36,10 +36,12 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const [dbStatus, setDbStatus] = useState<{ connected: boolean; type: string } | null>(null);
+  const [settings, setSettings] = useState<{ recaptchaEnabled: boolean } | null>(null);
   const recaptchaRef = useRef<ReCAPTCHA>(null);
   
-  // Fetch DB Status on mount
+  // Fetch settings and DB Status on mount
   React.useEffect(() => {
+    // Fetch DB Status
     fetch('/api/health')
       .then(res => res.json())
       .then(data => {
@@ -50,6 +52,16 @@ export const LoginView: React.FC<LoginViewProps> = ({
         }
       })
       .catch(() => setDbStatus({ connected: false, type: 'Error' }));
+
+    // Fetch Settings
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setSettings(data.settings);
+        }
+      })
+      .catch(err => console.error('Failed to fetch settings:', err));
   }, []);
   
   // Custom Popup Dialog State
@@ -82,7 +94,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
     }
 
     const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || import.meta.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
-    if (siteKey && !recaptchaToken) {
+    if (settings?.recaptchaEnabled && siteKey && !recaptchaToken) {
       openPopup('Verification Required', 'Please complete the reCAPTCHA verification.', 'warning');
       return;
     }
@@ -242,7 +254,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
             <span>Login using your registered account <strong>Passkey</strong>.</span>
           </div>
 
-          {siteKey && (
+          {siteKey && settings?.recaptchaEnabled && (
             <div className="flex justify-center py-2">
               <ReCAPTCHA
                 ref={recaptchaRef}

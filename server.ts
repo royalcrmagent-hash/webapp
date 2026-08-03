@@ -3,10 +3,9 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { createServer as createViteServer } from 'vite';
 import pg from 'pg';
 import axios from 'axios';
-import { sendEmail } from './server/mail.ts';
+import { sendEmail } from './server/mail';
 
 const { Pool } = pg;
 
@@ -24,8 +23,16 @@ const verifyRecaptcha = async (token: string) => {
   }
 };
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+let __filename = '';
+let __dirname = process.cwd();
+try {
+  if (typeof import.meta !== 'undefined' && import.meta && import.meta.url) {
+    __filename = fileURLToPath(import.meta.url);
+    __dirname = path.dirname(__filename);
+  }
+} catch (e) {
+  // Safe fallback for CommonJS / Vercel Serverless environment
+}
 
 const PORT = 3000;
 const DB_FILE = path.join(process.cwd(), 'server_db.json');

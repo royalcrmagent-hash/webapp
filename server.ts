@@ -115,7 +115,32 @@ const INITIAL_DB = {
   ],
   settings: {
     recaptchaEnabled: false,
+    maintenanceMode: false,
+    maintenanceMessage: 'System is under routine maintenance. Please try again shortly.',
+    feeConfig: {
+      sendMoneyFeePercent: 1.5,
+      cashOutFeePercent: 1.85,
+      billPayFeeFlat: 5.0,
+      minFee: 1.0,
+      maxFee: 100.0,
+    },
+    systemLimits: {
+      dailyTxLimit: 50000,
+      maxTxAmount: 25000,
+      minTxAmount: 10,
+    },
   },
+  auditLogs: [
+    {
+      id: 'log_01',
+      adminEmail: 'admin@gmail.com',
+      adminName: 'System Admin',
+      action: 'SYSTEM_INITIALIZED',
+      details: 'PayPulse Admin Panel & Database Diagnostic active.',
+      timestamp: new Date().toISOString(),
+      ipAddress: '127.0.0.1',
+    },
+  ],
 };
 
 // Database storage abstraction
@@ -225,7 +250,7 @@ async function startServer() {
 
   // Sync / Save full database state
   app.post('/api/db/sync', async (req, res) => {
-    const { systemUsers, contacts, transactions, notifications, virtualCards, biometricThreshold, biometricRequired, settings } = req.body;
+    const { systemUsers, contacts, transactions, notifications, virtualCards, biometricThreshold, biometricRequired, settings, auditLogs } = req.body;
     const currentDB = await readDB();
     const updatedDB = {
       ...currentDB,
@@ -236,7 +261,8 @@ async function startServer() {
       virtualCards: virtualCards || currentDB.virtualCards,
       biometricThreshold: biometricThreshold !== undefined ? biometricThreshold : currentDB.biometricThreshold,
       biometricRequired: biometricRequired !== undefined ? biometricRequired : currentDB.biometricRequired,
-      settings: settings || currentDB.settings
+      settings: settings || currentDB.settings,
+      auditLogs: auditLogs || currentDB.auditLogs || []
     };
     await writeDB(updatedDB);
     res.json({ success: true, message: 'Server database synchronized', db: updatedDB });
@@ -246,6 +272,54 @@ async function startServer() {
   app.get('/api/settings', async (req, res) => {
     const db = await readDB();
     res.json({ success: true, settings: db.settings || INITIAL_DB.settings });
+  });
+
+  // Database Connectivity Test
+  app.get('/api/admin/test-db', async (req, res) => {
+    if (!process.env.DATABASE_URL) {
+      return res.json({ 
+        success: false, 
+        message: 'Database connection string (DATABASE_URL) is not configured.',
+        type: 'Local Storage (JSON)'
+      });
+    }
+
+    try {
+      const db = await readDB(); // Just to ensure storage is initialized
+      // If using Pool (Neon/Postgres)
+      const { Pool } = await import('pg');
+      const pool = new Pool({ 
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false }
+      });
+      
+      const startTime = Date.now();
+      const result = await pool.query('SELECT 1 as result');
+      const duration = Date.now() - startTime;
+      
+      await pool.end();
+
+      if (result.rows && result.rows[0].result === 1) {
+        res.json({ 
+          success: true, 
+          message: `Connected to Neon Database successfully! Query 'SELECT 1' returned ${result.rows[0].result}.`,
+          latency: `${duration}ms`,
+          type: 'PostgreSQL (Neon)'
+        });
+      } else {
+        res.json({ 
+          success: false, 
+          message: 'Connected but query returned unexpected result.',
+          type: 'PostgreSQL (Neon)'
+        });
+      }
+    } catch (error: any) {
+      res.json({ 
+        success: false, 
+        message: `Database connection failed: ${error.message}`,
+        type: 'PostgreSQL (Neon)'
+      });
+    }
   });
 
   app.post('/api/settings', async (req, res) => {

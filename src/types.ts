@@ -30,7 +30,8 @@ export interface Transaction {
   fee: number;
   date: string;
   time: string;
-  status: 'completed' | 'pending' | 'failed';
+  status: 'completed' | 'pending' | 'failed' | 'reversed';
+  isSuspicious?: boolean;
   reference?: string;
   category?: string;
 }
@@ -76,9 +77,109 @@ export interface UserAccount {
   role: 'user' | 'admin';
   balance: number;
   isFrozen?: boolean;
+  kycStatus?: 'approved' | 'pending' | 'rejected' | 'unverified';
   avatar?: string;
   biometricEnabled?: boolean;
   createdAt?: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  adminEmail: string;
+  adminName: string;
+  action: string;
+  details: string;
+  targetUserId?: string;
+  targetUserName?: string;
+  timestamp: string;
+  ipAddress?: string;
+}
+
+export interface SystemFeeConfig {
+  sendMoneyFeePercent: number;
+  cashOutFeePercent: number;
+  billPayFeeFlat: number;
+  minFee: number;
+  maxFee: number;
+}
+
+export interface SystemLimits {
+  dailyTxLimit: number;
+  maxTxAmount: number;
+  minTxAmount: number;
+}
+
+export interface UserDevice {
+  id: string;
+  userId: string;
+  deviceName: string;
+  deviceModel: string;
+  os: string;
+  browser: string;
+  ip: string;
+  lastSeen: string;
+  isTrusted: boolean;
+  isRooted?: boolean;
+  isEmulator?: boolean;
+  isBlocked?: boolean;
+}
+
+export interface LoginHistoryEntry {
+  id: string;
+  userId: string;
+  ip: string;
+  city: string;
+  country: string;
+  isp: string;
+  deviceName: string;
+  isSuspicious: boolean;
+  timestamp: string;
+}
+
+export interface SecurityAlert {
+  id: string;
+  userId: string;
+  userName?: string;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  type: 'VOLUME_SPIKE' | 'IMPOSSIBLE_TRAVEL' | 'NIGHT_TRANSACTION' | 'RAPID_TRANSACTIONS' | 'SUSPICIOUS_IP' | 'FAILED_PIN';
+  message: string;
+  timestamp: string;
+  resolved: boolean;
+}
+
+export interface UserCustomRule {
+  id: string;
+  userId: string;
+  userName?: string;
+  ruleName: string;
+  ruleType: 'LIMIT' | 'BLOCK' | 'REQUIRE_APPROVAL' | 'REQUIRE_OTP';
+  conditionSummary: string;
+  actionSummary: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface AdminNote {
+  id: string;
+  userId: string;
+  adminName: string;
+  note: string;
+  noteType: 'GENERAL' | 'SECURITY' | 'VIP' | 'WARNING';
+  isPinned?: boolean;
+  createdAt: string;
+}
+
+export interface SupportTicket {
+  id: string;
+  userId: string;
+  userName: string;
+  userPhone: string;
+  subject: string;
+  category: string;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+  status: 'OPEN' | 'IN_PROGRESS' | 'WAITING_FOR_USER' | 'RESOLVED' | 'CLOSED';
+  lastUpdated: string;
+  createdAt: string;
 }
 
 export interface AuthState {

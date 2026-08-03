@@ -22,7 +22,7 @@ import { VirtualCardsView } from './components/views/VirtualCardsView';
 import { PopupDialog, DialogType } from './components/ui/PopupDialog';
 import { INITIAL_WALLET_STATE, INITIAL_SYSTEM_USERS, INITIAL_VIRTUAL_CARDS } from './data/initialData';
 import { getCountryBySymbolOrCode } from './data/countries';
-import { AppState, Transaction, Contact, Currency, UserAccount, VirtualCard, VirtualCardType, AppNotification } from './types';
+import { AppState, Transaction, Contact, Currency, UserAccount, VirtualCard, VirtualCardType, AppNotification, AuditLogEntry } from './types';
 import {
   Send,
   Sparkles,
@@ -135,6 +135,7 @@ export default function App() {
   const [biometricThreshold, setBiometricThreshold] = useState<number>(1000);
   const [biometricRequired, setBiometricRequired] = useState<boolean>(true);
   const [recaptchaEnabled, setRecaptchaEnabled] = useState<boolean>(false);
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
 
   // Auth Modal state
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
@@ -340,6 +341,9 @@ export default function App() {
             if (data.db.settings?.recaptchaEnabled !== undefined) {
               setRecaptchaEnabled(data.db.settings.recaptchaEnabled);
             }
+            if (Array.isArray(data.db.auditLogs)) {
+              setAuditLogs(data.db.auditLogs);
+            }
           }
         }
       } catch (err) {
@@ -382,6 +386,7 @@ export default function App() {
             virtualCards,
             biometricThreshold,
             biometricRequired,
+            auditLogs,
             settings: {
               recaptchaEnabled
             }
@@ -778,11 +783,16 @@ export default function App() {
           <AdminPanel
             currentUser={currentUser}
             systemUsers={systemUsers}
-            transactions={myTransactions}
+            transactions={app.transactions}
+            notifications={app.notifications}
+            auditLogs={auditLogs}
             biometricThreshold={biometricThreshold}
             biometricRequired={biometricRequired}
             recaptchaEnabled={recaptchaEnabled}
             onUpdateUsers={(updated) => setSystemUsers(updated)}
+            onUpdateTransactions={(updatedTxs) => setApp((prev) => ({ ...prev, transactions: updatedTxs }))}
+            onUpdateNotifications={(updatedNotifs) => setApp((prev) => ({ ...prev, notifications: updatedNotifs }))}
+            onAddAuditLog={(log) => setAuditLogs((prev) => [log, ...prev])}
             onUpdateBiometricSettings={(threshold, required) => {
               setBiometricThreshold(threshold);
               setBiometricRequired(required);

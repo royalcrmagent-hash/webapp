@@ -446,17 +446,13 @@ export default function App() {
     }
   };
 
-  const handleRegisterUser = async (newUser: UserAccount) => {
-    setSystemUsers((prev) => [newUser, ...prev]);
-    try {
-      await fetch('/api/users/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newUser),
-      });
-    } catch (e) {
-      console.error('Failed to register user on server:', e);
-    }
+  const handleRegisterUser = (newUser: UserAccount) => {
+    setSystemUsers((prev) => {
+      if (prev.some((u) => u.id === newUser.id || u.email === newUser.email)) {
+        return prev;
+      }
+      return [newUser, ...prev];
+    });
   };
 
   const handleUpdateUserCredentials = async (emailOrPhone: string, newPass: string, newPin: string) => {

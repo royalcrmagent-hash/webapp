@@ -109,9 +109,11 @@ export const SignupView: React.FC<SignupViewProps> = ({
     // Check duplicate phone or email
     const exists = systemUsers.some(
       (u) =>
-        u.email.toLowerCase() === cleanEmail ||
-        u.phone.replace(/\D/g, '') === cleanDigits ||
-        u.phone === fullPhone
+        (cleanEmail && u.email.toLowerCase() === cleanEmail) ||
+        (cleanDigits.length >= 3 && u.phone.replace(/\D/g, '').length >= 3 && 
+         (u.phone.replace(/\D/g, '').endsWith(cleanDigits.replace(/^0+/, '')) || 
+          cleanDigits.endsWith(u.phone.replace(/\D/g, '').replace(/^0+/, '')))) ||
+        (fullPhone && u.phone === fullPhone)
     );
 
     if (exists) {

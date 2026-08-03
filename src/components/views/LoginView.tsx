@@ -108,6 +108,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
         body: JSON.stringify({ 
           emailOrPhone: target, 
           passkey: passkey,
+          code: passkey,
           recaptchaToken
         })
       });
@@ -233,7 +234,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 <Lock className="w-4 h-4" />
               </div>
               <input
-                type={showPasskey ? 'text' : 'passkey'}
+                type={showPasskey ? 'text' : 'password'}
                 value={passkey}
                 onChange={(e) => setPasskey(e.target.value)}
                 placeholder="Enter account passkey"

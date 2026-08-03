@@ -144,6 +144,29 @@ const INITIAL_DB = {
 };
 
 // Database storage abstraction
+let local_db_storage = {
+  read: async () => {
+    try {
+      if (!fs.existsSync(DB_FILE)) {
+        await fs.promises.writeFile(DB_FILE, JSON.stringify(INITIAL_DB, null, 2));
+        return INITIAL_DB;
+      }
+      const data = await fs.promises.readFile(DB_FILE, 'utf-8');
+      return JSON.parse(data);
+    } catch (e) {
+      console.error('Read Local DB error:', e);
+      return INITIAL_DB;
+    }
+  },
+  write: async (data: any) => {
+    try {
+      await fs.promises.writeFile(DB_FILE, JSON.stringify(data, null, 2));
+    } catch (e) {
+      console.error('Write Local DB error:', e);
+    }
+  }
+};
+
 let db_storage: {
   read: () => Promise<any>;
   write: (data: any) => Promise<void>;
@@ -159,52 +182,58 @@ if (process.env.DATABASE_URL) {
 
   db_storage = {
     read: async () => {
-      const res = await pool.query('SELECT data FROM app_state WHERE id = 1');
-      return res.rows[0]?.data || INITIAL_DB;
+      try {
+        const res = await pool.query('SELECT data FROM app_state WHERE id = 1');
+        if (res.rows[0]?.data) {
+          return res.rows[0].data;
+        }
+      } catch (err) {
+        console.error('PostgreSQL read error, falling back to local storage:', err);
+      }
+      return await local_db_storage.read();
     },
     write: async (data: any) => {
-      await pool.query('UPDATE app_state SET data = $1 WHERE id = 1', [JSON.stringify(data)]);
+      let pgSaved = false;
+      try {
+        await pool.query(
+          'INSERT INTO app_state (id, data) VALUES (1, $1) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data',
+          [JSON.stringify(data)]
+        );
+        pgSaved = true;
+      } catch (err) {
+        console.error('PostgreSQL write error, falling back to local storage:', err);
+      }
+      await local_db_storage.write(data);
     }
   };
 
   async function initDB() {
-    const client = await pool.connect();
     try {
-      await client.query(`
-        CREATE TABLE IF NOT EXISTS app_state (
-          id INTEGER PRIMARY KEY,
-          data JSONB NOT NULL
-        );
-      `);
-      const res = await client.query('SELECT data FROM app_state WHERE id = 1');
-      if (res.rows.length === 0) {
-        await client.query('INSERT INTO app_state (id, data) VALUES ($1, $2)', [1, JSON.stringify(INITIAL_DB)]);
+      const client = await pool.connect();
+      try {
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS app_state (
+            id INTEGER PRIMARY KEY,
+            data JSONB NOT NULL
+          );
+        `);
+        const res = await client.query('SELECT data FROM app_state WHERE id = 1');
+        if (res.rows.length === 0) {
+          await client.query(
+            'INSERT INTO app_state (id, data) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING',
+            [1, JSON.stringify(INITIAL_DB)]
+          );
+        }
+      } finally {
+        client.release();
       }
-    } finally {
-      client.release();
+    } catch (err) {
+      console.error('Database initialization error:', err);
     }
   }
   initDB().catch(err => console.error('Database initialization error:', err));
 } else {
-  // Fallback to JSON file storage
-  db_storage = {
-    read: async () => {
-      try {
-        if (!fs.existsSync(DB_FILE)) {
-          await fs.promises.writeFile(DB_FILE, JSON.stringify(INITIAL_DB, null, 2));
-          return INITIAL_DB;
-        }
-        const data = await fs.promises.readFile(DB_FILE, 'utf-8');
-        return JSON.parse(data);
-      } catch (e) {
-        console.error('Read DB error:', e);
-        return INITIAL_DB;
-      }
-    },
-    write: async (data: any) => {
-      await fs.promises.writeFile(DB_FILE, JSON.stringify(data, null, 2));
-    }
-  };
+  db_storage = local_db_storage;
 }
 
 async function readDB() {
@@ -351,16 +380,23 @@ async function startServer() {
       return res.status(400).json({ success: false, error: 'Email and Phone are required' });
     }
 
-    const cleanPhoneDigits = newUser.phone.replace(/\D/g, '');
-    const cleanEmail = newUser.email.trim().toLowerCase();
+    const cleanPhoneDigits = newUser.phone ? newUser.phone.replace(/\D/g, '') : '';
+    const cleanEmail = newUser.email ? newUser.email.trim().toLowerCase() : '';
 
     // Check duplicate
-    const exists = db.systemUsers.some(
-      (u: any) =>
-        u.email.trim().toLowerCase() === cleanEmail ||
-        u.phone.replace(/\D/g, '') === cleanPhoneDigits ||
-        u.phone === newUser.phone
-    );
+    const exists = db.systemUsers.some((u: any) => {
+      const uEmail = u.email ? u.email.trim().toLowerCase() : '';
+      const uPhoneDigits = u.phone ? u.phone.replace(/\D/g, '') : '';
+      
+      const emailMatches = cleanEmail && uEmail === cleanEmail;
+      const phoneMatches = cleanPhoneDigits.length >= 3 && uPhoneDigits.length >= 3 && 
+                           (uPhoneDigits === cleanPhoneDigits || 
+                            uPhoneDigits.endsWith(cleanPhoneDigits.replace(/^0+/, '')) || 
+                            cleanPhoneDigits.endsWith(uPhoneDigits.replace(/^0+/, '')));
+      const rawPhoneMatches = newUser.phone && u.phone === newUser.phone;
+
+      return emailMatches || phoneMatches || rawPhoneMatches;
+    });
 
     if (exists) {
       return res.status(400).json({ success: false, error: 'User with this Email or Mobile already exists.' });
@@ -412,14 +448,30 @@ async function startServer() {
       return res.status(400).json({ success: false, error: 'Email or phone required' });
     }
 
-    const target = emailOrPhone.trim().toLowerCase().replaceAll(' ', '');
+    const rawTarget = emailOrPhone.trim();
+    const target = rawTarget.toLowerCase().replaceAll(' ', '');
     const cleanDigits = target.replace(/\D/g, '');
+    const cleanDigitsNoZero = cleanDigits.replace(/^0+/, '');
 
     const user = db.systemUsers.find((u: any) => {
       const uEmail = u.email ? u.email.trim().toLowerCase() : '';
-      const uPhoneDigits = u.phone ? u.phone.replace(/\D/g, '') : '';
-      const uAcc = u.profileId ? u.profileId.toLowerCase() : '';
-      return uEmail === target || uPhoneDigits === cleanDigits || uAcc === target;
+      const uPhone = u.phone ? u.phone.trim() : '';
+      const uPhoneDigits = uPhone.replace(/\D/g, '');
+      const uPhoneDigitsNoZero = uPhoneDigits.replace(/^0+/, '');
+      const uAcc = u.profileId ? u.profileId.trim().toLowerCase() : '';
+      const uName = u.name ? u.name.trim().toLowerCase().replaceAll(' ', '') : '';
+      const uUsername = u.username ? u.username.trim().toLowerCase() : '';
+
+      const matchEmail = uEmail && uEmail === rawTarget.toLowerCase();
+      const matchPhone = cleanDigitsNoZero.length >= 3 && uPhoneDigitsNoZero.length >= 3 && 
+                         (uPhoneDigits === cleanDigits || 
+                          uPhoneDigitsNoZero.endsWith(cleanDigitsNoZero) || 
+                          cleanDigitsNoZero.endsWith(uPhoneDigitsNoZero));
+      const matchAcc = uAcc && (uAcc === rawTarget.toLowerCase() || uAcc === target);
+      const matchName = uName && uName === target;
+      const matchUsername = uUsername && uUsername === rawTarget.toLowerCase();
+
+      return matchEmail || matchPhone || matchAcc || matchName || matchUsername;
     });
 
     if (!user) {
@@ -430,12 +482,18 @@ async function startServer() {
       return res.status(403).json({ success: false, error: 'Account is frozen by Admin. Contact support.' });
     }
 
-    if (passkey && user.passkey && user.passkey !== passkey) {
-      return res.status(401).json({ success: false, error: 'Incorrect Passkey.' });
-    }
+    // Check passkey or code
+    const enteredSecret = (passkey || code || '').trim();
+    const userPasskey = (user.passkey || '').trim();
+    const userCode = (user.code || '').trim();
 
-    if (code && user.code && user.code !== code) {
-      return res.status(401).json({ success: false, error: 'Incorrect Security Code.' });
+    if (userPasskey || userCode) {
+      const isPasskeyMatch = Boolean(userPasskey && enteredSecret === userPasskey);
+      const isCodeMatch = Boolean(userCode && enteredSecret === userCode);
+
+      if (!isPasskeyMatch && !isCodeMatch) {
+        return res.status(401).json({ success: false, error: 'Incorrect Passkey or Security Code.' });
+      }
     }
 
     // Send Login Notification Email

@@ -454,154 +454,216 @@ async function startServer() {
     res.json({ success: true, settings: db.settings });
   });
 
+  // Debug Info API
+  app.get('/api/admin/debug-info', async (req, res) => {
+    try {
+      const connStr = getDbConnectionString();
+      const db = await readDB();
+      const pool = getPool();
+      
+      let pgTestSuccess = false;
+      let pgError = null;
+      if (pool) {
+        try {
+          const testRes = await pool.query('SELECT 1 as val');
+          pgTestSuccess = testRes?.rows[0]?.val === 1;
+        } catch (e: any) {
+          pgError = e.message || String(e);
+        }
+      }
+
+      res.json({
+        success: true,
+        storageType: connStr ? 'PostgreSQL Cloud Database' : 'Local File / Memory Storage',
+        hasDbUrl: Boolean(connStr),
+        pgConnected: pgTestSuccess,
+        pgError: pgError,
+        userCount: Array.isArray(db.systemUsers) ? db.systemUsers.length : 0,
+        users: Array.isArray(db.systemUsers) ? db.systemUsers.map((u: any) => ({
+          name: u.name,
+          email: u.email,
+          phone: u.phone,
+          profileId: u.profileId,
+          role: u.role,
+          passkey: u.passkey ? '******' : 'none'
+        })) : [],
+        timestamp: new Date().toISOString()
+      });
+    } catch (err: any) {
+      res.status(500).json({
+        success: false,
+        error: `Database Debug Error: ${err.message || String(err)}`,
+        stack: err.stack
+      });
+    }
+  });
+
   // User Registration
   app.post('/api/users/register', async (req, res) => {
-    const { recaptchaToken, ...newUser } = req.body;
-    const db = await readDB();
-    const settings = db.settings || INITIAL_DB.settings;
-    
-    if (settings.recaptchaEnabled && process.env.RECAPTCHA_SECRET_KEY && !recaptchaToken) {
-      return res.status(400).json({ success: false, error: 'reCAPTCHA verification required' });
-    }
-
-    if (settings.recaptchaEnabled && recaptchaToken) {
-      const isValid = await verifyRecaptcha(recaptchaToken);
-      if (!isValid) {
-        return res.status(400).json({ success: false, error: 'reCAPTCHA verification failed' });
-      }
-    }
-
-    if (!newUser || !newUser.email || !newUser.phone) {
-      return res.status(400).json({ success: false, error: 'Email and Phone are required' });
-    }
-
-    const cleanPhoneDigits = newUser.phone ? newUser.phone.replace(/\D/g, '') : '';
-    const cleanEmail = newUser.email ? newUser.email.trim().toLowerCase() : '';
-
-    // Check duplicate
-    const exists = db.systemUsers.some((u: any) => {
-      const uEmail = u.email ? u.email.trim().toLowerCase() : '';
-      const uPhoneDigits = u.phone ? u.phone.replace(/\D/g, '') : '';
+    try {
+      const { recaptchaToken, ...newUser } = req.body;
+      const db = await readDB();
+      const settings = db.settings || INITIAL_DB.settings;
       
-      const emailMatches = cleanEmail && uEmail === cleanEmail;
-      const phoneMatches = cleanPhoneDigits.length >= 3 && uPhoneDigits.length >= 3 && 
-                           (uPhoneDigits === cleanPhoneDigits || 
-                            uPhoneDigits.endsWith(cleanPhoneDigits.replace(/^0+/, '')) || 
-                            cleanPhoneDigits.endsWith(uPhoneDigits.replace(/^0+/, '')));
-      const rawPhoneMatches = newUser.phone && u.phone === newUser.phone;
+      if (settings.recaptchaEnabled && process.env.RECAPTCHA_SECRET_KEY && !recaptchaToken) {
+        return res.status(400).json({ success: false, error: 'reCAPTCHA verification required' });
+      }
 
-      return emailMatches || phoneMatches || rawPhoneMatches;
-    });
+      if (settings.recaptchaEnabled && recaptchaToken) {
+        const isValid = await verifyRecaptcha(recaptchaToken);
+        if (!isValid) {
+          return res.status(400).json({ success: false, error: 'reCAPTCHA verification failed' });
+        }
+      }
 
-    if (exists) {
-      return res.status(400).json({ success: false, error: 'User with this Email or Mobile already exists.' });
+      if (!newUser || (!newUser.email && !newUser.phone)) {
+        return res.status(400).json({ success: false, error: 'Email and Phone are required' });
+      }
+
+      const cleanPhoneDigits = newUser.phone ? newUser.phone.replace(/\D/g, '') : '';
+      const cleanEmail = newUser.email ? newUser.email.trim().toLowerCase() : '';
+
+      // Check duplicate
+      const exists = db.systemUsers.some((u: any) => {
+        const uEmail = u.email ? u.email.trim().toLowerCase() : '';
+        const uPhoneDigits = u.phone ? u.phone.replace(/\D/g, '') : '';
+        
+        const emailMatches = cleanEmail && uEmail === cleanEmail;
+        const phoneMatches = cleanPhoneDigits.length >= 3 && uPhoneDigits.length >= 3 && 
+                             (uPhoneDigits === cleanPhoneDigits || 
+                              uPhoneDigits.endsWith(cleanPhoneDigits.replace(/^0+/, '')) || 
+                              cleanPhoneDigits.endsWith(uPhoneDigits.replace(/^0+/, '')));
+        const rawPhoneMatches = newUser.phone && u.phone === newUser.phone;
+
+        return emailMatches || phoneMatches || rawPhoneMatches;
+      });
+
+      if (exists) {
+        return res.status(400).json({ success: false, error: 'User with this Email or Mobile already exists.' });
+      }
+
+      const userWithDefaults = {
+        ...newUser,
+        id: newUser.id || `u_${Date.now()}`,
+        balance: newUser.balance ?? 0,
+        role: newUser.role || 'user',
+        isFrozen: false,
+        createdAt: newUser.createdAt || new Date().toISOString(),
+      };
+
+      db.systemUsers.push(userWithDefaults);
+      await writeDB(db);
+
+      // Send Welcome Email
+      if (userWithDefaults.email) {
+        sendEmail(
+          userWithDefaults.email,
+          'Welcome to PulseTracker!',
+          `Hello ${userWithDefaults.name},\n\nWelcome to PulseTracker! Your account has been successfully created. Your Profile ID is ${userWithDefaults.profileId}.\n\nThank you for joining us!`,
+          `<h1>Welcome to PulseTracker!</h1><p>Hello <strong>${userWithDefaults.name}</strong>,</p><p>Your account has been successfully created. Your Profile ID is <strong>${userWithDefaults.profileId}</strong>.</p><p>Thank you for joining us!</p>`
+        ).catch(err => console.error('Failed to send welcome email:', err));
+      }
+
+      res.json({ success: true, user: userWithDefaults, message: 'User registered successfully on database' });
+    } catch (err: any) {
+      console.error('User Registration DB Error:', err);
+      res.status(500).json({
+        success: false,
+        error: `Database Registration Error: ${err.message || String(err)}`,
+        debugDetails: err.stack || String(err)
+      });
     }
-
-    const userWithDefaults = {
-      ...newUser,
-      id: newUser.id || `u_${Date.now()}`,
-      balance: newUser.balance ?? 0,
-      role: newUser.role || 'user',
-      isFrozen: false,
-      createdAt: newUser.createdAt || new Date().toISOString(),
-    };
-
-    db.systemUsers.push(userWithDefaults);
-    await writeDB(db);
-
-    // Send Welcome Email
-    if (userWithDefaults.email) {
-      sendEmail(
-        userWithDefaults.email,
-        'Welcome to PulseTracker!',
-        `Hello ${userWithDefaults.name},\n\nWelcome to PulseTracker! Your account has been successfully created. Your Profile ID is ${userWithDefaults.profileId}.\n\nThank you for joining us!`,
-        `<h1>Welcome to PulseTracker!</h1><p>Hello <strong>${userWithDefaults.name}</strong>,</p><p>Your account has been successfully created. Your Profile ID is <strong>${userWithDefaults.profileId}</strong>.</p><p>Thank you for joining us!</p>`
-      ).catch(err => console.error('Failed to send welcome email:', err));
-    }
-
-    res.json({ success: true, user: userWithDefaults, message: 'User registered successfully on Vercel storage' });
   });
 
   // User Login
   app.post('/api/auth/login', async (req, res) => {
-    const { emailOrPhone, passkey, code, recaptchaToken } = req.body;
-    const db = await readDB();
-    const settings = db.settings || INITIAL_DB.settings;
-    
-    if (settings.recaptchaEnabled && process.env.RECAPTCHA_SECRET_KEY && !recaptchaToken) {
-      return res.status(400).json({ success: false, error: 'reCAPTCHA verification required' });
-    }
-
-    if (settings.recaptchaEnabled && recaptchaToken) {
-      const isValid = await verifyRecaptcha(recaptchaToken);
-      if (!isValid) {
-        return res.status(400).json({ success: false, error: 'reCAPTCHA verification failed' });
+    try {
+      const { emailOrPhone, passkey, code, recaptchaToken } = req.body;
+      const db = await readDB();
+      const settings = db.settings || INITIAL_DB.settings;
+      
+      if (settings.recaptchaEnabled && process.env.RECAPTCHA_SECRET_KEY && !recaptchaToken) {
+        return res.status(400).json({ success: false, error: 'reCAPTCHA verification required' });
       }
-    }
 
-    if (!emailOrPhone) {
-      return res.status(400).json({ success: false, error: 'Email or phone required' });
-    }
-
-    const rawTarget = emailOrPhone.trim();
-    const target = rawTarget.toLowerCase().replaceAll(' ', '');
-    const cleanDigits = target.replace(/\D/g, '');
-    const cleanDigitsNoZero = cleanDigits.replace(/^0+/, '');
-
-    const user = db.systemUsers.find((u: any) => {
-      const uEmail = u.email ? u.email.trim().toLowerCase() : '';
-      const uPhone = u.phone ? u.phone.trim() : '';
-      const uPhoneDigits = uPhone.replace(/\D/g, '');
-      const uPhoneDigitsNoZero = uPhoneDigits.replace(/^0+/, '');
-      const uAcc = u.profileId ? u.profileId.trim().toLowerCase() : '';
-      const uName = u.name ? u.name.trim().toLowerCase().replaceAll(' ', '') : '';
-      const uUsername = u.username ? u.username.trim().toLowerCase() : '';
-
-      const matchEmail = uEmail && uEmail === rawTarget.toLowerCase();
-      const matchPhone = cleanDigitsNoZero.length >= 3 && uPhoneDigitsNoZero.length >= 3 && 
-                         (uPhoneDigits === cleanDigits || 
-                          uPhoneDigitsNoZero.endsWith(cleanDigitsNoZero) || 
-                          cleanDigitsNoZero.endsWith(uPhoneDigitsNoZero));
-      const matchAcc = uAcc && (uAcc === rawTarget.toLowerCase() || uAcc === target);
-      const matchName = uName && uName === target;
-      const matchUsername = uUsername && uUsername === rawTarget.toLowerCase();
-
-      return matchEmail || matchPhone || matchAcc || matchName || matchUsername;
-    });
-
-    if (!user) {
-      return res.status(404).json({ success: false, error: 'Account not found on server.' });
-    }
-
-    if (user.isFrozen) {
-      return res.status(403).json({ success: false, error: 'Account is frozen by Admin. Contact support.' });
-    }
-
-    // Check passkey or code
-    const enteredSecret = (passkey || code || '').trim();
-    const userPasskey = (user.passkey || '').trim();
-    const userCode = (user.code || '').trim();
-
-    if (userPasskey || userCode) {
-      const isPasskeyMatch = Boolean(userPasskey && enteredSecret === userPasskey);
-      const isCodeMatch = Boolean(userCode && enteredSecret === userCode);
-
-      if (!isPasskeyMatch && !isCodeMatch) {
-        return res.status(401).json({ success: false, error: 'Incorrect Passkey or Security Code.' });
+      if (settings.recaptchaEnabled && recaptchaToken) {
+        const isValid = await verifyRecaptcha(recaptchaToken);
+        if (!isValid) {
+          return res.status(400).json({ success: false, error: 'reCAPTCHA verification failed' });
+        }
       }
-    }
 
-    // Send Login Notification Email
-    if (user.email) {
-      sendEmail(
-        user.email,
-        'New Login Detected',
-        `Hello ${user.name},\n\nA new login was detected on your PulseTracker account at ${new Date().toLocaleString()}.\n\nIf this wasn't you, please reset your passkey immediately.`,
-        `<h1>New Login Detected</h1><p>Hello <strong>${user.name}</strong>,</p><p>A new login was detected on your PulseTracker account at <strong>${new Date().toLocaleString()}</strong>.</p><p>If this wasn't you, please reset your passkey immediately.</p>`
-      ).catch(err => console.error('Failed to send login email:', err));
-    }
+      if (!emailOrPhone) {
+        return res.status(400).json({ success: false, error: 'Email or phone required' });
+      }
 
-    res.json({ success: true, user });
+      const rawTarget = emailOrPhone.trim();
+      const target = rawTarget.toLowerCase().replaceAll(' ', '');
+      const cleanDigits = target.replace(/\D/g, '');
+      const cleanDigitsNoZero = cleanDigits.replace(/^0+/, '');
+
+      const user = db.systemUsers.find((u: any) => {
+        const uEmail = u.email ? u.email.trim().toLowerCase() : '';
+        const uPhone = u.phone ? u.phone.trim() : '';
+        const uPhoneDigits = uPhone.replace(/\D/g, '');
+        const uPhoneDigitsNoZero = uPhoneDigits.replace(/^0+/, '');
+        const uAcc = u.profileId ? u.profileId.trim().toLowerCase() : '';
+        const uName = u.name ? u.name.trim().toLowerCase().replaceAll(' ', '') : '';
+        const uUsername = u.username ? u.username.trim().toLowerCase() : '';
+
+        const matchEmail = uEmail && uEmail === rawTarget.toLowerCase();
+        const matchPhone = cleanDigitsNoZero.length >= 3 && uPhoneDigitsNoZero.length >= 3 && 
+                           (uPhoneDigits === cleanDigits || 
+                            uPhoneDigitsNoZero.endsWith(cleanDigitsNoZero) || 
+                            cleanDigitsNoZero.endsWith(uPhoneDigitsNoZero));
+        const matchAcc = uAcc && (uAcc === rawTarget.toLowerCase() || uAcc === target);
+        const matchName = uName && uName === target;
+        const matchUsername = uUsername && uUsername === rawTarget.toLowerCase();
+
+        return matchEmail || matchPhone || matchAcc || matchName || matchUsername;
+      });
+
+      if (!user) {
+        return res.status(404).json({ success: false, error: `Account "${rawTarget}" not found in Database.` });
+      }
+
+      if (user.isFrozen) {
+        return res.status(403).json({ success: false, error: 'Account is frozen by Admin. Contact support.' });
+      }
+
+      // Check passkey or code
+      const enteredSecret = (passkey || code || '').trim();
+      const userPasskey = (user.passkey || '').trim();
+      const userCode = (user.code || '').trim();
+
+      if (userPasskey || userCode) {
+        const isPasskeyMatch = Boolean(userPasskey && enteredSecret === userPasskey);
+        const isCodeMatch = Boolean(userCode && enteredSecret === userCode);
+
+        if (!isPasskeyMatch && !isCodeMatch) {
+          return res.status(401).json({ success: false, error: 'Incorrect Passkey or Security Code.' });
+        }
+      }
+
+      // Send Login Notification Email
+      if (user.email) {
+        sendEmail(
+          user.email,
+          'New Login Detected',
+          `Hello ${user.name},\n\nA new login was detected on your PulseTracker account at ${new Date().toLocaleString()}.\n\nIf this wasn't you, please reset your passkey immediately.`,
+          `<h1>New Login Detected</h1><p>Hello <strong>${user.name}</strong>,</p><p>A new login was detected on your PulseTracker account at <strong>${new Date().toLocaleString()}</strong>.</p><p>If this wasn't you, please reset your passkey immediately.</p>`
+        ).catch(err => console.error('Failed to send login email:', err));
+      }
+
+      res.json({ success: true, user });
+    } catch (err: any) {
+      console.error('User Login DB Error:', err);
+      res.status(500).json({
+        success: false,
+        error: `Database Login Error: ${err.message || String(err)}`,
+        debugDetails: err.stack || String(err)
+      });
+    }
   });
 
   // Update Credentials (Code / Passkey reset)

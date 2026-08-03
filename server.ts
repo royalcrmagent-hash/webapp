@@ -143,7 +143,7 @@ const INITIAL_DB = {
   ],
 };
 
-// Database storage abstraction
+// Database storage abstraction - Using Local Storage (External Database OFF)
 let local_db_storage = {
   read: async () => {
     try {
@@ -152,89 +152,40 @@ let local_db_storage = {
         return INITIAL_DB;
       }
       const data = await fs.promises.readFile(DB_FILE, 'utf-8');
+      if (!data || !data.trim()) {
+        console.warn('Local DB file was empty. Re-initializing with default data.');
+        await fs.promises.writeFile(DB_FILE, JSON.stringify(INITIAL_DB, null, 2));
+        return INITIAL_DB;
+      }
       return JSON.parse(data);
     } catch (e) {
-      console.error('Read Local DB error:', e);
+      console.error('Read Local DB error, resetting corrupted file:', e);
+      try {
+        await fs.promises.writeFile(DB_FILE, JSON.stringify(INITIAL_DB, null, 2));
+      } catch (writeErr) {
+        console.error('Failed to repair DB file:', writeErr);
+      }
       return INITIAL_DB;
     }
   },
   write: async (data: any) => {
     try {
-      await fs.promises.writeFile(DB_FILE, JSON.stringify(data, null, 2));
+      const content = JSON.stringify(data, null, 2);
+      const tempFile = `${DB_FILE}.tmp`;
+      await fs.promises.writeFile(tempFile, content, 'utf-8');
+      await fs.promises.rename(tempFile, DB_FILE);
     } catch (e) {
       console.error('Write Local DB error:', e);
+      try {
+        await fs.promises.writeFile(DB_FILE, JSON.stringify(data, null, 2));
+      } catch (writeErr) {
+        console.error('Fallback write error:', writeErr);
+      }
     }
   }
 };
 
-let db_storage: {
-  read: () => Promise<any>;
-  write: (data: any) => Promise<void>;
-};
-
-if (process.env.DATABASE_URL) {
-  const pool = new Pool({ 
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-      rejectUnauthorized: false
-    }
-  });
-
-  db_storage = {
-    read: async () => {
-      try {
-        const res = await pool.query('SELECT data FROM app_state WHERE id = 1');
-        if (res.rows[0]?.data) {
-          return res.rows[0].data;
-        }
-      } catch (err) {
-        console.error('PostgreSQL read error, falling back to local storage:', err);
-      }
-      return await local_db_storage.read();
-    },
-    write: async (data: any) => {
-      let pgSaved = false;
-      try {
-        await pool.query(
-          'INSERT INTO app_state (id, data) VALUES (1, $1) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data',
-          [JSON.stringify(data)]
-        );
-        pgSaved = true;
-      } catch (err) {
-        console.error('PostgreSQL write error, falling back to local storage:', err);
-      }
-      await local_db_storage.write(data);
-    }
-  };
-
-  async function initDB() {
-    try {
-      const client = await pool.connect();
-      try {
-        await client.query(`
-          CREATE TABLE IF NOT EXISTS app_state (
-            id INTEGER PRIMARY KEY,
-            data JSONB NOT NULL
-          );
-        `);
-        const res = await client.query('SELECT data FROM app_state WHERE id = 1');
-        if (res.rows.length === 0) {
-          await client.query(
-            'INSERT INTO app_state (id, data) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING',
-            [1, JSON.stringify(INITIAL_DB)]
-          );
-        }
-      } finally {
-        client.release();
-      }
-    } catch (err) {
-      console.error('Database initialization error:', err);
-    }
-  }
-  initDB().catch(err => console.error('Database initialization error:', err));
-} else {
-  db_storage = local_db_storage;
-}
+let db_storage = local_db_storage;
 
 async function readDB() {
   return await db_storage.read();
@@ -255,10 +206,10 @@ async function startServer() {
   app.get('/api/health', async (req, res) => {
     try {
       await readDB();
-      const storageType = process.env.DATABASE_URL ? 'Cloud (PostgreSQL)' : 'Local (JSON Storage)';
+      const storageType = 'Local File Storage (External DB Disabled)';
       res.json({ 
         status: 'ok', 
-        database: 'connected', 
+        database: 'disabled', 
         storageType,
         timestamp: new Date().toISOString()
       });

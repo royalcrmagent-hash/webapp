@@ -9,7 +9,6 @@ import axios from 'axios';
 import { sendEmail } from './server/mail.ts';
 
 const { Pool } = pg;
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 const verifyRecaptcha = async (token: string) => {
   const secret = process.env.RECAPTCHA_SECRET_KEY;
@@ -31,7 +30,7 @@ const __dirname = path.dirname(__filename);
 const PORT = 3000;
 const DB_FILE = path.join(process.cwd(), 'server_db.json');
 
-// Initial default data if file doesn't exist
+// Initial default data if database/file doesn't exist
 const INITIAL_DB = {
   systemUsers: [
     {
@@ -44,6 +43,20 @@ const INITIAL_DB = {
       passkey: '123456',
       role: 'admin',
       balance: 100000,
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=250',
+      biometricEnabled: true,
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: 'usr_admin2',
+      name: 'PayPulse Admin',
+      email: 'admin@paypulse.com',
+      phone: '01800000000',
+      profileId: 'ADM-0000-111',
+      code: '1234',
+      passkey: '123456',
+      role: 'admin',
+      balance: 500000,
       avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=250',
       biometricEnabled: true,
       createdAt: new Date().toISOString(),
@@ -143,61 +156,195 @@ const INITIAL_DB = {
   ],
 };
 
-// Database storage abstraction - Using Local Storage (External Database OFF)
-let local_db_storage = {
-  read: async () => {
-    try {
-      if (!fs.existsSync(DB_FILE)) {
-        await fs.promises.writeFile(DB_FILE, JSON.stringify(INITIAL_DB, null, 2));
-        return INITIAL_DB;
-      }
-      const data = await fs.promises.readFile(DB_FILE, 'utf-8');
-      if (!data || !data.trim()) {
-        console.warn('Local DB file was empty. Re-initializing with default data.');
-        await fs.promises.writeFile(DB_FILE, JSON.stringify(INITIAL_DB, null, 2));
-        return INITIAL_DB;
-      }
-      return JSON.parse(data);
-    } catch (e) {
-      console.error('Read Local DB error, resetting corrupted file:', e);
-      try {
-        await fs.promises.writeFile(DB_FILE, JSON.stringify(INITIAL_DB, null, 2));
-      } catch (writeErr) {
-        console.error('Failed to repair DB file:', writeErr);
-      }
-      return INITIAL_DB;
-    }
-  },
-  write: async (data: any) => {
-    try {
-      const content = JSON.stringify(data, null, 2);
-      const tempFile = `${DB_FILE}.tmp`;
-      await fs.promises.writeFile(tempFile, content, 'utf-8');
-      await fs.promises.rename(tempFile, DB_FILE);
-    } catch (e) {
-      console.error('Write Local DB error:', e);
-      try {
-        await fs.promises.writeFile(DB_FILE, JSON.stringify(data, null, 2));
-      } catch (writeErr) {
-        console.error('Fallback write error:', writeErr);
-      }
-    }
-  }
+// Get connection string from standard env vars on Vercel, Neon, Supabase, Heroku, etc.
+const getDbConnectionString = () => {
+  return (
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.POSTGRES_URL_NON_POOLING ||
+    ''
+  ).trim();
 };
 
-let db_storage = local_db_storage;
+let pgPoolInstance: any = null;
+const getPool = () => {
+  const connStr = getDbConnectionString();
+  if (!connStr) return null;
+  if (!pgPoolInstance) {
+    try {
+      pgPoolInstance = new Pool({
+        connectionString: connStr,
+        ssl: connStr.includes('localhost') || connStr.includes('127.0.0.1') ? false : { rejectUnauthorized: false },
+        max: 10,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 5000,
+      });
+    } catch (err) {
+      console.error('Error creating PG Pool:', err);
+    }
+  }
+  return pgPoolInstance;
+};
+
+// In-Memory state fallback for serverless execution
+let memoryDb: any = JSON.parse(JSON.stringify(INITIAL_DB));
+
+// Helper to ensure default admin user accounts always exist
+const ensureAdminAccounts = (dbData: any) => {
+  if (!dbData || typeof dbData !== 'object') dbData = JSON.parse(JSON.stringify(INITIAL_DB));
+  if (!Array.isArray(dbData.systemUsers)) dbData.systemUsers = [];
+
+  const admin1 = {
+    id: 'usr_admin',
+    name: 'System Admin',
+    email: 'admin@gmail.com',
+    phone: '01700000000',
+    profileId: 'ADM-0000-999',
+    code: '1234',
+    passkey: '123456',
+    role: 'admin',
+    balance: 100000,
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=250',
+    biometricEnabled: true,
+    createdAt: new Date().toISOString(),
+  };
+
+  const admin2 = {
+    id: 'usr_admin2',
+    name: 'PayPulse Admin',
+    email: 'admin@paypulse.com',
+    phone: '01800000000',
+    profileId: 'ADM-0000-111',
+    code: '1234',
+    passkey: '123456',
+    role: 'admin',
+    balance: 500000,
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=250',
+    biometricEnabled: true,
+    createdAt: new Date().toISOString(),
+  };
+
+  const hasAdmin1 = dbData.systemUsers.some((u: any) => u.email === admin1.email || u.id === admin1.id);
+  if (!hasAdmin1) dbData.systemUsers.unshift(admin1);
+
+  const hasAdmin2 = dbData.systemUsers.some((u: any) => u.email === admin2.email || u.id === admin2.id);
+  if (!hasAdmin2) dbData.systemUsers.unshift(admin2);
+
+  return dbData;
+};
+
+let isPgTableCreated = false;
 
 async function readDB() {
-  return await db_storage.read();
+  const pool = getPool();
+  if (pool) {
+    try {
+      if (!isPgTableCreated) {
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS app_state (
+            id INTEGER PRIMARY KEY,
+            data JSONB NOT NULL
+          );
+        `);
+        isPgTableCreated = true;
+      }
+
+      const res = await pool.query('SELECT data FROM app_state WHERE id = 1');
+      if (res.rows.length > 0 && res.rows[0].data) {
+        const dbData = res.rows[0].data;
+        const sanitized = ensureAdminAccounts(dbData);
+        memoryDb = sanitized;
+        return sanitized;
+      } else {
+        // Seed database
+        const sanitized = ensureAdminAccounts(INITIAL_DB);
+        await pool.query(
+          'INSERT INTO app_state (id, data) VALUES (1, $1) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data',
+          [JSON.stringify(sanitized)]
+        );
+        memoryDb = sanitized;
+        return sanitized;
+      }
+    } catch (err) {
+      console.error('PostgreSQL database query failed, falling back to local file/memory storage:', err);
+    }
+  }
+
+  // File system fallback
+  try {
+    let filePath = DB_FILE;
+    if (!fs.existsSync(filePath)) {
+      const tmpPath = path.join('/tmp', 'server_db.json');
+      if (fs.existsSync(tmpPath)) {
+        filePath = tmpPath;
+      }
+    }
+
+    if (fs.existsSync(filePath)) {
+      const data = await fs.promises.readFile(filePath, 'utf-8');
+      if (data && data.trim()) {
+        const dbData = JSON.parse(data);
+        const sanitized = ensureAdminAccounts(dbData);
+        memoryDb = sanitized;
+        return sanitized;
+      }
+    }
+  } catch (e) {
+    console.error('File DB read error:', e);
+  }
+
+  const sanitized = ensureAdminAccounts(memoryDb);
+  memoryDb = sanitized;
+  return sanitized;
 }
 
 async function writeDB(data: any) {
-  await db_storage.write(data);
+  const sanitized = ensureAdminAccounts(data);
+  memoryDb = sanitized;
+
+  const pool = getPool();
+  if (pool) {
+    try {
+      if (!isPgTableCreated) {
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS app_state (
+            id INTEGER PRIMARY KEY,
+            data JSONB NOT NULL
+          );
+        `);
+        isPgTableCreated = true;
+      }
+
+      await pool.query(
+        'INSERT INTO app_state (id, data) VALUES (1, $1) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data',
+        [JSON.stringify(sanitized)]
+      );
+      return;
+    } catch (err) {
+      console.error('PostgreSQL database write error, falling back to local file:', err);
+    }
+  }
+
+  // File write fallback
+  try {
+    const content = JSON.stringify(sanitized, null, 2);
+    const tempFile = `${DB_FILE}.tmp`;
+    await fs.promises.writeFile(tempFile, content, 'utf-8');
+    await fs.promises.rename(tempFile, DB_FILE);
+  } catch (e) {
+    try {
+      const tmpPath = path.join('/tmp', 'server_db.json');
+      await fs.promises.writeFile(tmpPath, JSON.stringify(sanitized, null, 2), 'utf-8');
+    } catch (tmpErr) {
+      console.warn('Filesystem is read-only (e.g. Vercel Serverless). Data persisted in memory state.');
+    }
+  }
 }
 
-async function startServer() {
-  const app = express();
+const app = express();
 
+async function startServer() {
   app.use(express.json({ limit: '10mb' }));
 
   // API ROUTES (Always FIRST before Vite/static middlewares)
@@ -206,10 +353,11 @@ async function startServer() {
   app.get('/api/health', async (req, res) => {
     try {
       await readDB();
-      const storageType = 'Local File Storage (External DB Disabled)';
+      const connStr = getDbConnectionString();
+      const storageType = connStr ? 'PostgreSQL Cloud Database' : 'Local File / Memory Storage';
       res.json({ 
         status: 'ok', 
-        database: 'disabled', 
+        database: connStr ? 'connected' : 'local_fallback', 
         storageType,
         timestamp: new Date().toISOString()
       });
@@ -256,48 +404,44 @@ async function startServer() {
 
   // Database Connectivity Test
   app.get('/api/admin/test-db', async (req, res) => {
-    if (!process.env.DATABASE_URL) {
+    const connStr = getDbConnectionString();
+    if (!connStr) {
       return res.json({ 
         success: false, 
-        message: 'Database connection string (DATABASE_URL) is not configured.',
-        type: 'Local Storage (JSON)'
+        message: 'No DATABASE_URL or POSTGRES_URL environment variable found. App is operating smoothly using Local/Memory storage.',
+        type: 'Local Storage / In-Memory'
       });
     }
 
     try {
-      const db = await readDB(); // Just to ensure storage is initialized
-      // If using Pool (Neon/Postgres)
-      const { Pool } = await import('pg');
-      const pool = new Pool({ 
-        connectionString: process.env.DATABASE_URL,
-        ssl: { rejectUnauthorized: false }
-      });
+      const pool = getPool();
+      if (!pool) {
+        return res.json({ success: false, message: 'Failed to create PostgreSQL connection pool.', type: 'PostgreSQL Database' });
+      }
       
       const startTime = Date.now();
       const result = await pool.query('SELECT 1 as result');
       const duration = Date.now() - startTime;
-      
-      await pool.end();
 
       if (result.rows && result.rows[0].result === 1) {
         res.json({ 
           success: true, 
-          message: `Connected to Neon Database successfully! Query 'SELECT 1' returned ${result.rows[0].result}.`,
+          message: `Connected to Cloud PostgreSQL Database successfully! Query 'SELECT 1' returned ${result.rows[0].result}.`,
           latency: `${duration}ms`,
-          type: 'PostgreSQL (Neon)'
+          type: 'PostgreSQL Database'
         });
       } else {
         res.json({ 
           success: false, 
           message: 'Connected but query returned unexpected result.',
-          type: 'PostgreSQL (Neon)'
+          type: 'PostgreSQL Database'
         });
       }
     } catch (error: any) {
       res.json({ 
         success: false, 
-        message: `Database connection failed: ${error.message}`,
-        type: 'PostgreSQL (Neon)'
+        message: `Database connection error: ${error.message}`,
+        type: 'PostgreSQL Database'
       });
     }
   });
@@ -580,9 +724,13 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 PayPulse Full-Stack Server running on http://0.0.0.0:${PORT}`);
-  });
+  if (!process.env.VERCEL) {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 PayPulse Full-Stack Server running on http://0.0.0.0:${PORT}`);
+    });
+  }
 }
 
 startServer();
+
+export default app;

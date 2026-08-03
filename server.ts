@@ -343,32 +343,28 @@ async function writeDB(data: any) {
 }
 
 const app = express();
+app.use(express.json({ limit: '10mb' }));
 
-async function startServer() {
-  app.use(express.json({ limit: '10mb' }));
-
-  // API ROUTES (Always FIRST before Vite/static middlewares)
-
-  // Healthcheck
-  app.get('/api/health', async (req, res) => {
-    try {
-      await readDB();
-      const connStr = getDbConnectionString();
-      const storageType = connStr ? 'PostgreSQL Cloud Database' : 'Local File / Memory Storage';
-      res.json({ 
-        status: 'ok', 
-        database: connStr ? 'connected' : 'local_fallback', 
-        storageType,
-        timestamp: new Date().toISOString()
-      });
-    } catch (err) {
-      res.status(500).json({ 
-        status: 'error', 
-        database: 'disconnected', 
-        error: err instanceof Error ? err.message : String(err) 
-      });
-    }
-  });
+// Healthcheck
+app.get('/api/health', async (req, res) => {
+  try {
+    await readDB();
+    const connStr = getDbConnectionString();
+    const storageType = connStr ? 'PostgreSQL Cloud Database' : 'Local File / Memory Storage';
+    res.json({ 
+      status: 'ok', 
+      database: connStr ? 'connected' : 'local_fallback', 
+      storageType,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    res.status(500).json({ 
+      status: 'error', 
+      database: 'disconnected', 
+      error: err instanceof Error ? err.message : String(err) 
+    });
+  }
+});
 
   // Get full database state
   app.get('/api/db', async (req, res) => {
@@ -767,32 +763,55 @@ async function startServer() {
     res.json({ success: true, db });
   });
 
-  // Vite Middleware for Development Mode
-  if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
-      server: { 
-        middlewareMode: true,
-        hmr: false,
-      },
-      appType: 'spa',
+  // Global API Catch-All for unknown /api routes
+  app.all('/api/*', (req, res) => {
+    res.status(404).json({
+      success: false,
+      error: `API Route ${req.method} ${req.path} not found.`
     });
-    app.use(vite.middlewares);
-  } else {
-    // Production Static Files
+  });
+
+  // Global Error Handler Middleware (Guarantees JSON response instead of HTML error)
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('Unhandled Server Error:', err);
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        error: `Server Internal Error: ${err.message || String(err)}`,
+        debugDetails: err.stack || String(err)
+      });
+    }
+  });
+
+  // Vite / Static files middleware setup
+  if (!process.env.VERCEL && process.env.NODE_ENV !== 'production') {
+    async function setupVite() {
+      const { createServer: createViteServer } = await import('vite');
+      const vite = await createViteServer({
+        server: { 
+          middlewareMode: true,
+          hmr: false,
+        },
+        appType: 'spa',
+      });
+      app.use(vite.middlewares);
+
+      app.listen(PORT, '0.0.0.0', () => {
+        console.log(`🚀 PayPulse Full-Stack Server running on http://0.0.0.0:${PORT}`);
+      });
+    }
+    setupVite().catch(err => console.error('Failed to start Vite dev server:', err));
+  } else if (!process.env.VERCEL) {
+    // Standalone Production Static Files
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
-  }
 
-  if (!process.env.VERCEL) {
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 PayPulse Full-Stack Server running on http://0.0.0.0:${PORT}`);
+      console.log(`🚀 PayPulse Production Server running on http://0.0.0.0:${PORT}`);
     });
   }
-}
-
-startServer();
 
 export default app;

@@ -58,14 +58,44 @@ export const LoginView: React.FC<LoginViewProps> = ({
       ...prev.slice(0, 19),
     ]);
   };
+
+  const safeFetchJson = async (url: string, options?: RequestInit) => {
+    try {
+      const res = await fetch(url, options);
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const data = await res.json();
+        return { ok: res.ok, status: res.status, data };
+      } else {
+        const text = await res.text();
+        const shortText = text.replace(/<[^>]*>?/gm, '').trim().slice(0, 150);
+        return {
+          ok: false,
+          status: res.status,
+          data: {
+            success: false,
+            error: `Server Non-JSON Response [${res.status}]: ${shortText || 'Unknown Server Output'}`
+          }
+        };
+      }
+    } catch (e: any) {
+      return {
+        ok: false,
+        status: 0,
+        data: {
+          success: false,
+          error: `Network Connection Error: ${e.message || String(e)}`
+        }
+      };
+    }
+  };
   
   // Fetch settings and DB Status on mount
   const checkHealth = async () => {
     try {
       addLog('info', 'Checking server health API...');
-      const res = await fetch('/api/health');
-      const data = await res.json();
-      if (data.status === 'ok') {
+      const { ok, data } = await safeFetchJson('/api/health');
+      if (ok && data.status === 'ok') {
         setDbStatus({ 
           connected: data.database === 'connected' || data.database === 'local_fallback', 
           type: data.storageType || 'Local/Cloud',
@@ -74,7 +104,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
         addLog('success', `Server health OK (${data.storageType}). DB Status: ${data.database}`);
       } else {
         setDbStatus({ connected: false, type: 'Disconnected' });
-        addLog('error', `Server health check error: ${JSON.stringify(data)}`);
+        addLog('error', `Server health check failed: ${data?.error || JSON.stringify(data)}`);
       }
     } catch (e: any) {
       setDbStatus({ connected: false, type: 'Error' });
@@ -86,38 +116,35 @@ export const LoginView: React.FC<LoginViewProps> = ({
     checkHealth();
 
     // Fetch Settings
-    fetch('/api/settings')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          setSettings(data.settings);
-        }
-      })
-      .catch(err => {
-        console.error('Failed to fetch settings:', err);
-        addLog('error', `Settings fetch failed: ${err.message || String(err)}`);
-      });
+    safeFetchJson('/api/settings').then(({ data }) => {
+      if (data?.success) {
+        setSettings(data.settings);
+      }
+    }).catch(err => {
+      console.error('Failed to fetch settings:', err);
+      addLog('error', `Settings fetch failed: ${err.message || String(err)}`);
+    });
   }, []);
 
   const runDbDiagnostic = async () => {
     setIsDebugging(true);
     addLog('info', 'Running deep Database Diagnostic (/api/admin/debug-info & /api/admin/test-db)...');
     try {
-      const [debugRes, testDbRes] = await Promise.all([
-        fetch('/api/admin/debug-info').then(r => r.json()).catch(e => ({ error: e.message })),
-        fetch('/api/admin/test-db').then(r => r.json()).catch(e => ({ error: e.message }))
+      const [{ data: debugRes }, { data: testDbRes }] = await Promise.all([
+        safeFetchJson('/api/admin/debug-info'),
+        safeFetchJson('/api/admin/test-db')
       ]);
 
       setDebugApiResult({ debugRes, testDbRes });
-      if (testDbRes.success) {
+      if (testDbRes?.success) {
         addLog('success', `DB Connection Test: ${testDbRes.message} (${testDbRes.latency})`);
       } else {
-        addLog('error', `DB Connection Test Notice: ${testDbRes.message || 'Failed'}`);
+        addLog('error', `DB Connection Test Notice: ${testDbRes?.message || testDbRes?.error || 'Failed'}`);
       }
 
-      if (debugRes.success) {
+      if (debugRes?.success) {
         addLog('info', `DB Debug Info: ${debugRes.userCount} users found in DB. Storage: ${debugRes.storageType}`);
-      } else if (debugRes.error) {
+      } else if (debugRes?.error) {
         addLog('error', `DB Debug Info Error: ${debugRes.error}`);
       }
     } catch (err: any) {
@@ -173,7 +200,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
     addLog('info', `Attempting login for identifier: "${target}"...`);
 
     try {
-      const response = await fetch('/api/auth/login', {
+      const { ok, status, data } = await safeFetchJson('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -183,16 +210,14 @@ export const LoginView: React.FC<LoginViewProps> = ({
           recaptchaToken
         })
       });
-
-      const data = await response.json();
       
-      if (response.ok && data.success && data.user) {
+      if (ok && data.success && data.user) {
         addLog('success', `Login successful for user: ${data.user.name} (${data.user.email})`);
         onLoginSuccess(data.user);
       } else {
-        const errorMsg = data.error || `Server returned status ${response.status}`;
+        const errorMsg = data.error || `Server returned status ${status}`;
         setLastError(errorMsg);
-        addLog('error', `Login Failed [${response.status}]: ${errorMsg}`);
+        addLog('error', `Login Failed [${status}]: ${errorMsg}`);
         
         openPopup(
           'Login Error / DB Notice',
@@ -204,7 +229,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
               </pre>
             )}
             <p className="text-slate-400 text-[11px] pt-1">
-              Need help? Click <strong>🐞 DB Debugger</strong> below to run a direct database test.
+              Need help? Click <strong>🐞 Debugger</strong> to inspect system status.
             </p>
           </div>
         );
